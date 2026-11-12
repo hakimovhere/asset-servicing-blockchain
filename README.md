@@ -15,7 +15,7 @@ Open the page in two windows (presenter view on the laptop, full screen on the p
 
 ## Files
 
-- `Slides_Backup.pdf`: every slide as a PDF, for use without internet.
+- `Group6_Asset_Servicing_Slides.pdf`: every slide as a PDF, for use without internet.
 - `contract-test/`: our workshop contract `simpleLoan.sol` (all gaps completed) and a script that runs its full life cycle on a local Ethereum test network, including four wrong moves that the code must block.
 
 ```bash

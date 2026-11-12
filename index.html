@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="en" data-theme="light" style="color-scheme:light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Asset Servicing On-Chain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+html{-webkit-text-size-adjust:100%}*,*::before,*::after{box-sizing:border-box}body{margin:0}[hidden]{display:none!important}
+/* TrustAge palette and type */
+:root{
+  --bg:#F6EFDF; --surface:#FFFFFF; --surface-2:#FBF7EE; --ink:#14203A; --muted:#566079;
+  --line:#E4DAC6; --line-strong:#9AA5B8; --edge:#8E99AD;
+  --accent:#C76A0E; --accent-soft:#FCEBD7; --btn-bg:#A85509; --btn-fg:#FFFFFF;
+  --blue:#2B5DA8; --blue-soft:#E3ECF8; --zone:#FAF6EC;
+  --good:#2E7D4F; --good-soft:#E2F2E8; --warn:#8A5D00; --warn-soft:#FBF0D2;
+  --bad:#B42318; --bad-soft:#FBE1DE;
+  --font-d:'Sora','Segoe UI',Arial,sans-serif; --font-b:'Source Sans 3','Segoe UI',Arial,sans-serif; --font-m:'IBM Plex Mono',Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0B111D; --surface:#141C2E; --surface-2:#1A2439; --ink:#E7ECF5; --muted:#A4AEC4;
+  --line:#2B3754; --line-strong:#56637F; --edge:#6C7893;
+  --accent:#F2A14A; --accent-soft:#3A2A16; --btn-bg:#F2A14A; --btn-fg:#1A1206;
+  --blue:#86AAEA; --blue-soft:#1C2A47; --zone:#10182A;
+  --good:#62C48F; --good-soft:#163323; --warn:#E5B94E; --warn-soft:#352B12;
+  --bad:#F2766B; --bad-soft:#3B1A1A; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0B111D; --surface:#141C2E; --surface-2:#1A2439; --ink:#E7ECF5; --muted:#A4AEC4;
+  --line:#2B3754; --line-strong:#56637F; --edge:#6C7893;
+  --accent:#F2A14A; --accent-soft:#3A2A16; --btn-bg:#F2A14A; --btn-fg:#1A1206;
+  --blue:#86AAEA; --blue-soft:#1C2A47; --zone:#10182A;
+  --good:#62C48F; --good-soft:#163323; --warn:#E5B94E; --warn-soft:#352B12;
+  --bad:#F2766B; --bad-soft:#3B1A1A; color-scheme:dark }
+
+body{ background:var(--bg); color:var(--ink); font-family:var(--font-b); }
+.deck{ padding:14px 16px 24px; display:flex; flex-direction:column; align-items:center; gap:12px; }
+.main{ width:100%; display:flex; flex-direction:column; align-items:center; gap:12px; min-width:0; }
+.stagewrap{ width:100%; display:flex; justify-content:center; }
+.stage{
+  position:relative; width:min(100%, calc((100vh - 130px) * 16 / 9)); aspect-ratio:16/9;
+  container-type:inline-size; background:var(--surface); border:1px solid var(--line); border-radius:14px; overflow:hidden;
+  --t-h1:6cqw; --t-h2:3cqw; --t-lead:1.9cqw; --t-body:1.6cqw; --t-small:1.25cqw; --t-tiny:1cqw;
+  --pad:3.4cqw; --gap:1.4cqw;
+}
+.stagewrap:fullscreen{ background:var(--bg); align-items:center; }
+.stagewrap:fullscreen .stage{ width:min(100vw, calc(100vh * 16 / 9)); border-radius:0; }
+
+.slide{ position:absolute; inset:0; padding:var(--pad); display:flex; flex-direction:column; gap:var(--gap); }
+.eyebrow{ margin:0; font:600 var(--t-small)/1.2 var(--font-b); letter-spacing:.12em; text-transform:uppercase; color:var(--accent); }
+h1,h2,h3{ margin:0; font-family:var(--font-d); text-wrap:balance; }
+h2{ font-size:var(--t-h2); line-height:1.15; font-weight:700; }
+h3{ font-size:var(--t-lead); line-height:1.2; font-weight:600; }
+p{ margin:0; }
+.head{ display:flex; flex-direction:column; gap:.6cqw; }
+.foot{ font-size:var(--t-tiny); color:var(--muted); }
+code{ font-family:var(--font-m); font-weight:500; }
+.hl{ color:var(--accent); }
+.fill{ flex:1; min-height:0; display:flex; align-items:center; justify-content:center; }
+
+/* ---------- motion ---------- */
+.slide.enter .rise{ animation:rise .6s cubic-bezier(.2,.7,.2,1) both; animation-delay:calc(var(--d,0) * 100ms); }
+@keyframes rise{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:none; } }
+.slide [data-step]{ opacity:0; transform:translateY(14px) scale(.97); transition:opacity .5s ease, transform .6s cubic-bezier(.3,1.4,.5,1); }
+.slide [data-step].in{ opacity:1; transform:none; }
+svg [data-step]{ transform-box:fill-box; transform-origin:center; }
+.draw{ stroke-dasharray:400; stroke-dashoffset:400; transition:stroke-dashoffset .9s ease .15s; }
+.in .draw{ stroke-dashoffset:0; }
+.pop.in{ animation:pop .6s cubic-bezier(.3,1.6,.5,1); }
+@keyframes pop{ 0%{ transform:scale(.6); } 100%{ transform:scale(1); } }
+
+/* ---------- shared SVG ---------- */
+.dg{ display:block; width:100%; height:auto; max-height:100%; color:var(--ink); }
+.dg text{ fill:var(--ink); font-family:var(--font-b); }
+.dg .nt{ font-family:var(--font-d); font-size:20px; font-weight:700; }
+.dg .ns{ font-size:15px; fill:var(--muted); }
+.dg .lab{ font:700 13px var(--font-b); letter-spacing:.12em; fill:var(--muted); }
+.dg .box{ fill:var(--surface); stroke:var(--line-strong); stroke-width:1.6; transition:fill .3s, stroke .3s, stroke-width .3s; }
+.dg .on .box{ stroke:var(--accent); stroke-width:3; fill:var(--accent-soft); }
+.dg .done .box{ stroke:var(--blue); fill:var(--blue-soft); }
+.dg .ico{ fill:none; stroke:var(--accent); stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+.dg .icof{ fill:var(--accent-soft); stroke:var(--accent); stroke-width:3; stroke-linejoin:round; }
+.dg .icotxt{ fill:var(--accent); font:700 22px var(--font-d); }
+.dg .rail{ stroke:var(--line); stroke-width:6; stroke-linecap:round; fill:none; }
+.dg .coin{ fill:var(--accent); stroke:var(--surface); stroke-width:3; }
+.dg .coin.g{ fill:var(--good); }
+.dg [data-s]{ opacity:0; transition:opacity .4s; }
+.dg [data-s].show{ opacity:1; }
+
+/* ---------- 1 title ---------- */
+.s-title{ justify-content:center; gap:2cqw; }
+.s-title h1{ font-size:var(--t-h1); line-height:1.02; font-weight:700; letter-spacing:-.02em; }
+.tag{ font-family:var(--font-d); font-size:2.6cqw; font-weight:600; line-height:1.2; color:var(--accent); }
+.titlechain{ width:46cqw; height:auto; margin-top:1cqw; }
+.titlechain .blk{ fill:var(--surface-2); stroke:var(--line-strong); stroke-width:1.5; }
+.titlechain .blk.a{ stroke:var(--accent); fill:var(--accent-soft); }
+.titlechain .lnk{ stroke:var(--edge); stroke-width:2; stroke-dasharray:4 4; animation:dash 1.2s linear infinite; }
+@keyframes dash{ to{ stroke-dashoffset:-16; } }
+.titlechain .pulse{ fill:var(--accent); animation:hop 3.6s ease-in-out infinite; }
+@keyframes hop{ 0%{ transform:translateX(0); opacity:0 } 8%{opacity:1} 85%{ transform:translateX(350px); opacity:1 } 100%{ transform:translateX(350px); opacity:0 } }
+.team{ display:flex; gap:1cqw; flex-wrap:wrap; }
+.team > span{ font:600 var(--t-small)/1 var(--font-m); padding:.6em 1em; border-radius:999px; background:var(--surface-2); border:1px solid var(--line); }
+.team b{ color:var(--accent); font-weight:600; }
+
+/* ---------- tiles ---------- */
+.tiles{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:var(--gap); width:100%; }
+.tile{ border:1px solid var(--line); border-radius:16px; padding:2.4cqw 1.6cqw; background:var(--surface-2); display:flex; flex-direction:column; align-items:center; text-align:center; gap:1cqw; }
+.tile svg{ width:7cqw; height:7cqw; }
+.tile h3{ font-size:2.3cqw; }
+.tile p{ font-size:var(--t-body); color:var(--muted); line-height:1.3; }
+.tile .ico{ fill:none; stroke:var(--good); stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+.tile .icof{ fill:var(--good-soft); stroke:var(--good); stroke-width:3; stroke-linejoin:round; }
+.tile .icotxt{ fill:var(--good); font:700 22px var(--font-d); }
+
+/* ---------- worries ---------- */
+.qs{ display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:var(--gap); width:100%; }
+.qs > :nth-child(-n+3){ grid-column:span 2; } .qs > :nth-child(n+4){ grid-column:span 3; }
+.q{ border:2px solid var(--bad); border-radius:16px; padding:1.8cqw 2cqw; background:var(--bad-soft); display:flex; flex-direction:column; gap:.6cqw; justify-content:center; min-height:12cqw; }
+.q .n{ font:600 var(--t-small)/1 var(--font-m); color:var(--bad); }
+.q h3{ font-size:2.2cqw; }
+.q .stat{ font:700 var(--t-body)/1.3 var(--font-b); color:var(--muted); }
+.q .stat b{ font:700 2cqw var(--font-d); color:var(--bad); font-variant-numeric:tabular-nums; }
+
+/* ---------- flow panel ---------- */
+.split{ flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 25cqw; gap:var(--gap); align-items:center; }
+.dg .sk{ font-family:var(--font-m); font-size:14px; fill:var(--muted); }
+.dg .sv{ font-family:var(--font-m); font-size:14px; font-weight:600; fill:var(--muted); }
+.dg .sv.set{ fill:var(--good); }
+.dg .cbox{ fill:var(--zone); stroke:var(--blue); stroke-width:2; }
+.dg .el{ font-family:var(--font-m); font-size:15px; font-weight:600; fill:var(--accent); }
+.dg .el.money{ fill:var(--good); font-size:16px; }
+.dg .edge{ fill:none; stroke:var(--edge); stroke-width:1.8; opacity:.4; transition:stroke .3s, opacity .3s; }
+.dg .edge.done{ stroke:var(--blue); opacity:.9; }
+.dg .edge.on{ stroke:var(--accent); stroke-width:3.2; opacity:1; }
+.dg .edge.money.on{ stroke:var(--good); }
+.dg .clockpill{ fill:var(--warn-soft); stroke:var(--warn); stroke-width:1.5; }
+.dg .clocktxt{ fill:var(--warn); font-weight:700; font-size:15px; }
+.panel{ display:flex; flex-direction:column; gap:1.2cqw; background:var(--surface-2); border:1px solid var(--line); border-radius:14px; padding:1.8cqw; }
+.pips{ display:flex; gap:.4cqw; }
+.pips i{ flex:1; height:.45cqw; border-radius:3px; background:var(--line); transition:background .3s; }
+.pips i.on{ background:var(--accent); } .pips i.done{ background:var(--blue); }
+.cap-num{ font:600 var(--t-tiny)/1.2 var(--font-m); color:var(--accent); text-transform:uppercase; letter-spacing:.06em; }
+.cap-big{ font:700 2.3cqw/1.2 var(--font-d); min-height:2.4em; }
+.cap-fn{ font:600 var(--t-small)/1.3 var(--font-m); color:var(--muted); min-height:1.3em; }
+
+/* ---------- code worries ---------- */
+.two{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:calc(var(--gap)*1.5); width:100%; }
+.cw{ border:1px solid var(--line); border-radius:16px; padding:2.4cqw; background:var(--surface-2); display:flex; flex-direction:column; gap:1.4cqw; }
+.cw .big{ font:700 3cqw/1.15 var(--font-d); }
+.cw code{ font-size:var(--t-body); background:#14203A; color:#E7ECF5; padding:1cqw 1.2cqw; border-radius:10px; display:block; white-space:pre; overflow:hidden; }
+.cw code .k{ color:#F2A14A; }
+.cw p{ font-size:var(--t-lead); line-height:1.35; color:var(--muted); }
+.cw p.big{ color:var(--ink); }
+
+/* ---------- scale ---------- */
+.scale{ display:grid; grid-template-columns:minmax(0,1fr) 34cqw minmax(0,1fr); gap:var(--gap); flex:1; min-height:0; align-items:center; }
+.mode{ align-self:center; font:600 var(--t-small)/1 var(--font-m); padding:.6em 1.1em; border-radius:999px; border:1px solid var(--line-strong); background:var(--surface-2); transition:background .4s, color .4s, border-color .4s; }
+.mode.pub{ background:var(--bad-soft); color:var(--bad); border-color:var(--bad); }
+.mode.perm{ background:var(--good-soft); color:var(--good); border-color:var(--good); }
+.side h3{ font-size:2.1cqw; margin-bottom:.8cqw; }
+.side.ben h3{ color:var(--good); } .side.cost h3{ color:var(--bad); }
+.wts{ display:flex; flex-direction:column; gap:.6cqw; }
+.wt{ font-size:var(--t-body); font-weight:600; line-height:1.25; padding:.7cqw 1cqw; border-radius:10px; border:1px solid var(--line); background:var(--surface-2); }
+.side.ben .wt{ border-left:.4cqw solid var(--good); }
+.side.cost .wt{ border-left:.4cqw solid var(--bad); }
+.wt .fix{ display:none; color:var(--good); font-size:var(--t-small); }
+.wt.eased .txt{ text-decoration:line-through; text-decoration-color:var(--good); text-decoration-thickness:2px; opacity:.6; }
+.wt.eased .fix{ display:block; }
+.sc{ width:100%; height:auto; display:block; }
+.sc .post{ fill:var(--line-strong); }
+.sc .beam{ fill:var(--ink); }
+.sc .str{ stroke:var(--edge); stroke-width:2; }
+.sc .dish.b{ fill:var(--good-soft); stroke:var(--good); stroke-width:2; }
+.sc .dish.c{ fill:var(--bad-soft); stroke:var(--bad); stroke-width:2; }
+.sc .pl{ font:700 15px var(--font-d); }
+.sc .pl.b{ fill:var(--good); } .sc .pl.c{ fill:var(--bad); }
+.verdict{ font:600 var(--t-lead)/1.3 var(--font-d); text-align:center; }
+
+/* ---------- 3 questions ---------- */
+.road{ position:relative; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:calc(var(--gap)*1.5); padding-top:3.4cqw; width:100%; }
+.road .rail{ position:absolute; left:3%; right:3%; top:1.1cqw; height:.5cqw; background:var(--line); border-radius:4px; overflow:hidden; }
+.road .rail i{ display:block; height:100%; width:0; background:var(--accent); transition:width .9s ease; }
+.road[data-p="1"] .rail i{ width:20%; } .road[data-p="2"] .rail i{ width:54%; } .road[data-p="3"] .rail i{ width:100%; }
+.ask{ border:1px solid var(--line); border-radius:16px; padding:2.2cqw 2cqw; background:var(--surface-2); display:flex; flex-direction:column; gap:.9cqw; position:relative; }
+.ask::before{ content:''; position:absolute; top:-2.9cqw; left:2cqw; width:1.7cqw; height:1.7cqw; border-radius:50%; background:var(--surface); border:.35cqw solid var(--accent); }
+.ask .n{ font:600 var(--t-small)/1 var(--font-m); color:var(--accent); }
+.ask h3{ font-size:2.8cqw; }
+.ask p{ font-size:var(--t-lead); color:var(--muted); line-height:1.3; }
+.bottom{ font:600 2.4cqw/1.3 var(--font-d); text-align:center; padding:1.6cqw; border-radius:14px; background:#14203A; color:#FFFFFF; }
+.bottom .hl{ color:#F2A14A; }
+
+/* ---------- close ---------- */
+.s-close{ justify-content:center; align-items:center; text-align:center; gap:2.2cqw; }
+.s-close h1{ font-size:6.4cqw; }
+.recap{ display:flex; gap:1cqw; flex-wrap:wrap; justify-content:center; }
+.recap span{ font:600 var(--t-body)/1 var(--font-b); padding:.7em 1.2em; border-radius:999px; border:1px solid var(--line); background:var(--surface-2); }
+.recap span b{ color:var(--accent); }
+.srcs{ font-size:var(--t-tiny); color:var(--muted); line-height:1.5; max-width:110ch; }
+
+/* ---------- nav ---------- */
+.nav{ display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:10px; }
+.navbtn{ font:600 15px/1 var(--font-b); padding:10px 16px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); color:var(--ink); cursor:pointer; }
+.navbtn.primary{ background:var(--btn-bg); color:var(--btn-fg); border-color:var(--btn-bg); }
+.navbtn[aria-pressed="true"]{ background:var(--ink); color:var(--surface); border-color:var(--ink); }
+.navbtn:disabled{ opacity:.4; cursor:default; }
+.navbtn:focus-visible{ outline:3px solid var(--blue); outline-offset:2px; }
+.count{ font:600 15px/1 var(--font-m); color:var(--muted); min-width:4.5em; text-align:center; font-variant-numeric:tabular-nums; }
+.hint{ font-size:13px; color:var(--muted); text-align:center; }
+.hint kbd{ font:600 12px var(--font-m); border:1px solid var(--line-strong); border-radius:4px; padding:1px 5px; background:var(--surface); }
+
+/* ---------- presenter panel ---------- */
+.presenter .deck{ display:grid; grid-template-columns:minmax(0,1fr) minmax(320px,30vw); align-items:start; gap:16px; }
+.pp{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:16px 18px; display:flex; flex-direction:column; gap:12px; position:sticky; top:14px; max-height:calc(100vh - 28px); overflow:auto; }
+.pp-top{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.who{ display:flex; align-items:center; gap:10px; }
+.who .av{ width:40px; height:40px; border-radius:50%; display:grid; place-items:center; font:700 17px var(--font-d); color:#fff; flex:none; }
+.who .nm{ font:700 19px/1.1 var(--font-d); }
+.who .rl{ font-size:13px; color:var(--muted); }
+.clock{ text-align:right; }
+.clock .el{ font:700 26px/1 var(--font-m); font-variant-numeric:tabular-nums; }
+.clock .tg{ font-size:12.5px; color:var(--muted); margin-top:3px; }
+.clock.over .el{ color:var(--bad); } .clock.ok .el{ color:var(--good); }
+.slot{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); }
+.slot .bar{ flex:1; height:6px; border-radius:4px; background:var(--line); overflow:hidden; }
+.slot .bar i{ display:block; height:100%; width:0; background:var(--good); transition:width .5s linear; }
+.slot .bar i.over{ background:var(--bad); }
+.pp h4{ margin:0; font:600 12px/1.2 var(--font-m); color:var(--accent); letter-spacing:.08em; text-transform:uppercase; }
+.say{ margin:0; padding-left:1.15em; display:flex; flex-direction:column; gap:7px; font-size:17px; line-height:1.4; }
+.say li.cl{ list-style:none; margin-left:-1.15em; padding:6px 8px; border-radius:8px; transition:opacity .3s, background .3s; }
+.say li.cl.done{ opacity:.45; }
+.say li.cl.nextc{ background:var(--blue-soft); outline:2px solid var(--blue); }
+.chipc{ font:600 12px/1 var(--font-m); color:#fff; background:var(--blue); padding:3px 7px; border-radius:5px; margin-right:4px; white-space:nowrap; vertical-align:2px; }
+.hand{ font-size:16px; line-height:1.4; padding:10px 12px; border-radius:10px; background:var(--accent-soft); border-left:4px solid var(--accent); }
+.nextup{ font-size:14px; color:var(--muted); border-top:1px solid var(--line); padding-top:10px; }
+.nextup b{ color:var(--ink); }
+.qa{ display:flex; flex-direction:column; gap:8px; }
+.qa details{ border:1px solid var(--line); border-radius:8px; padding:8px 10px; background:var(--surface-2); font-size:15px; line-height:1.4; }
+.qa summary{ font-weight:700; cursor:pointer; }
+.qa details p{ margin-top:6px; }
+.timerrow{ display:flex; gap:8px; flex-wrap:wrap; }
+.timerrow .navbtn{ font-size:13px; padding:7px 11px; }
+
+/* ---------- cheat sheet ---------- */
+.sheet{ width:min(100%, 1100px); margin:8px auto 40px; padding:0 16px; }
+.sheet h2{ font-size:24px; margin:10px 0 4px; }
+.sheet .meta{ color:var(--muted); font-size:15px; margin-bottom:14px; }
+.sheet .grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(320px,1fr)); gap:12px; }
+.sc-card{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px 14px; break-inside:avoid; display:flex; flex-direction:column; gap:7px; }
+.sc-card .t{ display:flex; justify-content:space-between; gap:8px; font:600 13px var(--font-m); color:var(--accent); }
+.sc-card h3{ font-size:16px; }
+.sc-card ul{ margin:0; padding-left:1.1em; font-size:14.5px; line-height:1.4; display:flex; flex-direction:column; gap:4px; }
+.sc-card .h{ font-size:13.5px; color:var(--muted); border-top:1px dashed var(--line); padding-top:6px; }
+
+/* ---------- phones ---------- */
+@media (max-width:760px){
+  .stage{ aspect-ratio:auto; width:100%; --t-h1:38px; --t-h2:24px; --t-lead:18px; --t-body:16px; --t-small:14px; --t-tiny:13px; --pad:18px; --gap:12px; }
+  .slide{ position:relative; inset:auto; }
+  .tag{ font-size:20px; } .titlechain{ width:100%; }
+  .tiles,.two,.road,.split,.scale{ grid-template-columns:1fr; }
+  .qs{ grid-template-columns:1fr; } .qs > *{ grid-column:auto !important; }
+  .tile svg{ width:56px; height:56px; } .tile h3,.q h3,.side h3,.cw .big{ font-size:20px; } .ask h3{ font-size:24px; }
+  .q .stat b{ font-size:18px; } .cap-big{ font-size:19px; } .bottom{ font-size:18px; } .s-close h1{ font-size:34px; }
+  .road .rail,.ask::before{ display:none; } .road{ padding-top:0; }
+  .presenter .deck{ display:flex; } .pp{ position:static; max-height:none; }
+}
+@media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
+@media print{ .main,.pp{ display:none !important; } .sheet{ display:block !important; width:100%; margin:0; padding:0; } body{ background:#fff; } }
+</style>
+</head>
+<body>
+<div class="deck">
+<div class="main">
+  <div class="stagewrap" id="stagewrap">
+  <div class="stage" id="stage" aria-live="polite">
+
+  <!-- 1 TITLE -->
+  <section class="slide s-title" id="s1" aria-label="Slide 1: Title">
+    <p class="eyebrow rise">Topic #3 · Final presentation</p>
+    <h1 class="rise" style="--d:1">Blockchain in<br>asset servicing</h1>
+    <p class="tag rise" style="--d:2">What worries investors?</p>
+    <svg class="titlechain rise" style="--d:3" viewBox="0 0 460 60" aria-hidden="true">
+      <line class="lnk" x1="70" y1="30" x2="110" y2="30"/><line class="lnk" x1="180" y1="30" x2="220" y2="30"/><line class="lnk" x1="290" y1="30" x2="330" y2="30"/>
+      <rect class="blk" x="2" y="8" width="68" height="44" rx="8"/><rect class="blk" x="110" y="8" width="70" height="44" rx="8"/><rect class="blk a" x="220" y="8" width="70" height="44" rx="8"/><rect class="blk" x="330" y="8" width="68" height="44" rx="8"/>
+      <circle class="pulse" cx="14" cy="30" r="6"/>
+    </svg>
+    <div class="team rise" style="--d:4"><span><b>01</b> <span data-spk="0"></span></span><span><b>02</b> <span data-spk="1"></span></span><span><b>03</b> <span data-spk="2"></span></span></div>
+    <p class="foot rise" style="--d:5">Group 6 ·3.DTF2 Blockchain and Cryptocurrency Markets · Aymeric Lovat · University of Luxembourg · 2026</p>
+  </section>
+
+  <!-- 2 WHAT IS ASSET SERVICING -->
+  <section class="slide" id="s2" aria-label="Slide 2: What is asset servicing" hidden>
+    <div class="head rise"><p class="eyebrow">The basics</p><h2>Asset servicing = everything after you buy</h2></div>
+    <div class="fill">
+      <svg class="dg" viewBox="0 0 1000 430" role="img" aria-label="You and your bond in the middle, with four services around: keep it safe, move it, pay you, report.">
+        <g data-step="1"><path class="rail draw" d="M430,190 L292,118"/>
+          <g transform="translate(200,100)"><rect class="box" x="-115" y="-60" width="230" height="120" rx="18"/>
+          <path class="icof" transform="translate(-70,0)" d="M0,-24 L20,-15 L20,2 C20,15 9,23 0,27 C-9,23 -20,15 -20,2 L-20,-15 Z"/>
+          <text class="nt" x="-36" y="-4">Keep it safe</text><text class="ns" x="-36" y="20">custody</text></g></g>
+        <g data-step="2"><path class="rail draw" d="M570,190 L708,118"/>
+          <g transform="translate(800,100)"><rect class="box" x="-115" y="-60" width="230" height="120" rx="18"/>
+          <path class="ico" transform="translate(-70,0)" d="M-22,-8 L16,-8 M7,-17 L16,-8 L7,1 M22,10 L-16,10 M-7,1 L-16,10 L-7,19"/>
+          <text class="nt" x="-36" y="-4">Move it</text><text class="ns" x="-36" y="20">settlement</text></g></g>
+        <g data-step="3"><path class="rail draw" d="M430,250 L292,322"/>
+          <g transform="translate(200,340)"><rect class="box" x="-115" y="-60" width="230" height="120" rx="18"/>
+          <circle class="icof" cx="-70" cy="0" r="22"/><text class="icotxt" x="-70" y="8" text-anchor="middle">€</text>
+          <text class="nt" x="-36" y="-4">Pay you</text><text class="ns" x="-36" y="20">coupons</text></g></g>
+        <g data-step="4"><path class="rail draw" d="M570,250 L708,322"/>
+          <g transform="translate(800,340)"><rect class="box" x="-115" y="-60" width="230" height="120" rx="18"/>
+          <rect class="icof" x="-87" y="-22" width="34" height="44" rx="4"/><path class="ico" d="M-80,-8 L-60,-8 M-80,2 L-60,2 M-80,12 L-68,12"/>
+          <text class="nt" x="-36" y="-4">Report</text><text class="ns" x="-36" y="20">statements</text></g></g>
+        <g class="rise" style="--d:1"><circle cx="500" cy="220" r="82" style="fill:#14203A"/>
+          <text x="500" y="214" text-anchor="middle" style="fill:#FFFFFF;font:700 26px var(--font-d)">You</text>
+          <text x="500" y="244" text-anchor="middle" style="fill:#F2A14A;font:600 17px var(--font-b)">+ your bond</text></g>
+      </svg>
+    </div>
+  </section>
+
+  <!-- 3 TODAY VS BLOCKCHAIN -->
+  <section class="slide" id="s3" aria-label="Slide 3: Today versus blockchain" hidden>
+    <div class="head rise"><p class="eyebrow">Today vs blockchain</p><h2>Today: many middlemen. Blockchain: one shared ledger</h2></div>
+    <div class="fill">
+      <svg class="dg" id="race" viewBox="0 0 1000 400" role="img" aria-label="Today a payment passes six parties and takes about two days. On blockchain it passes one smart contract and takes minutes.">
+        <text class="lab" x="10" y="40">TODAY</text>
+        <text id="t1" x="990" y="42" text-anchor="end" style="font:700 24px var(--font-m);fill:var(--muted)">0 h</text>
+        <path class="rail" id="p1" d="M80,110 L930,110"/>
+        <g class="st"><rect class="box" x="15" y="80" width="130" height="60" rx="12"/><text class="nt" x="80" y="117" text-anchor="middle" style="font-size:17px">Investor</text></g>
+        <g class="st"><rect class="box" x="185" y="80" width="130" height="60" rx="12"/><text class="nt" x="250" y="117" text-anchor="middle" style="font-size:17px">Bank</text></g>
+        <g class="st"><rect class="box" x="355" y="80" width="130" height="60" rx="12"/><text class="nt" x="420" y="117" text-anchor="middle" style="font-size:17px">Custodian</text></g>
+        <g class="st"><rect class="box" x="525" y="80" width="130" height="60" rx="12"/><text class="nt" x="590" y="117" text-anchor="middle" style="font-size:17px">CSD</text></g>
+        <g class="st"><rect class="box" x="695" y="80" width="130" height="60" rx="12"/><text class="nt" x="760" y="117" text-anchor="middle" style="font-size:17px">Paying agent</text></g>
+        <g class="st"><rect class="box" x="865" y="80" width="130" height="60" rx="12"/><text class="nt" x="930" y="117" text-anchor="middle" style="font-size:17px">Issuer</text></g>
+        <circle class="coin" id="c1" r="11" cx="80" cy="110" style="opacity:0"/>
+        <g data-s="lane2">
+          <line x1="10" y1="200" x2="990" y2="200" style="stroke:var(--line);stroke-dasharray:4 6"/>
+          <text class="lab" x="10" y="250" style="fill:var(--good)">ON BLOCKCHAIN</text>
+          <text id="t2" x="990" y="252" text-anchor="end" style="font:700 24px var(--font-m);fill:var(--good)"></text>
+          <path class="rail" id="p2" d="M80,320 L930,320"/>
+          <g class="st2"><rect class="box" x="15" y="290" width="130" height="60" rx="12"/><text class="nt" x="80" y="327" text-anchor="middle" style="font-size:17px">Investor</text></g>
+          <g class="st2"><rect class="box" x="385" y="282" width="240" height="76" rx="14" style="stroke:var(--good);stroke-width:2.5;fill:var(--good-soft)"/><text class="nt" x="505" y="318" text-anchor="middle" style="font-size:18px">Smart contract</text><text class="ns" x="505" y="340" text-anchor="middle">one shared ledger</text></g>
+          <g class="st2"><rect class="box" x="865" y="290" width="130" height="60" rx="12"/><text class="nt" x="930" y="327" text-anchor="middle" style="font-size:17px">Issuer</text></g>
+          <circle class="coin g" id="c2" r="11" cx="80" cy="320" style="opacity:0"/>
+        </g>
+      </svg>
+    </div>
+  </section>
+
+  <!-- 4 THE PROMISE -->
+  <section class="slide" id="s4" aria-label="Slide 4: The promise" hidden>
+    <div class="head rise"><p class="eyebrow">The promise</p><h2>What blockchain promises investors</h2></div>
+    <div class="fill">
+      <div class="tiles">
+        <div class="tile" data-step="1"><svg viewBox="-30 -30 60 60" aria-hidden="true"><path class="icof" d="M5,-26 L-15,4 L0,4 L-5,26 L15,-4 L0,-4 Z"/></svg><h3>Faster</h3><p>minutes, not days</p></div>
+        <div class="tile" data-step="2"><svg viewBox="-30 -30 60 60" aria-hidden="true"><path class="ico" d="M-18,-4 A18,18 0 0 1 14,-12 M14,-12 L16,-24 M14,-12 L2,-12 M18,4 A18,18 0 0 1 -14,12 M-14,12 L-16,24 M-14,12 L-2,12"/></svg><h3>Automatic</h3><p>coupons paid by code</p></div>
+        <div class="tile" data-step="3"><svg viewBox="-30 -30 60 60" aria-hidden="true"><path class="icof" d="M-26,0 Q0,-22 26,0 Q0,22 -26,0 Z"/><circle class="ico" r="7"/></svg><h3>Transparent</h3><p>one record for all</p></div>
+        <div class="tile" data-step="4"><svg viewBox="-30 -30 60 60" aria-hidden="true"><circle class="icof" r="22"/><text class="icotxt" y="8" text-anchor="middle">€</text></svg><h3>Cheaper</h3><p>fewer middlemen</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 OUR CONTRACT -->
+  <section class="slide" id="s5" aria-label="Slide 5: Our smart contract" hidden>
+    <div class="head rise"><p class="eyebrow">Our smart contract · simpleLoan</p><h2>We built a bond that services itself</h2></div>
+    <div class="split rise" style="--d:1" id="flow">
+      <div style="min-width:0">
+      <svg class="dg" viewBox="0 0 1000 440" role="img" aria-label="The borrower creates the contract, the investor joins, both pass KYC, the investor sends 10 ETH to the borrower through the contract, and at maturity the borrower pays 10.5 ETH back.">
+        <defs>
+          <marker id="m-off" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--edge)"/></marker>
+          <marker id="m-done" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--blue)"/></marker>
+          <marker id="m-on" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="13" markerHeight="13" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--accent)"/></marker>
+          <marker id="m-money" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="13" markerHeight="13" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--good)"/></marker>
+        </defs>
+        <path class="edge" data-e="e1" d="M240,190 L376,190"/>
+        <path class="edge" data-e="e2" d="M760,190 L624,190"/>
+        <path class="edge" data-e="e3a" d="M240,240 L376,240"/>
+        <path class="edge" data-e="e3b" d="M760,240 L624,240"/>
+        <path class="edge money" data-e="e4a" d="M865,158 C865,62 560,62 560,116"/>
+        <path class="edge money" data-e="e4b" d="M440,118 C440,62 135,62 135,156"/>
+        <path class="edge money" data-e="e6a" d="M135,272 C135,382 440,382 440,316"/>
+        <path class="edge money" data-e="e6b" d="M560,314 C560,382 865,382 865,274"/>
+        <text class="el" data-s="l1" x="308" y="180" text-anchor="middle">create</text>
+        <text class="el" data-s="l2" x="692" y="180" text-anchor="middle">join</text>
+        <text class="el" data-s="l3" x="308" y="264" text-anchor="middle">ID ✓</text>
+        <text class="el" data-s="l3" x="692" y="264" text-anchor="middle">ID ✓</text>
+        <text class="el money" data-s="l4" x="712" y="70" text-anchor="middle">10 ETH</text>
+        <text class="el money" data-s="l4" x="288" y="70" text-anchor="middle">10 ETH</text>
+        <text class="el money" data-s="l6" x="288" y="386" text-anchor="middle">10.5 ETH</text>
+        <text class="el money" data-s="l6" x="712" y="386" text-anchor="middle">10.5 ETH</text>
+        <g data-n="borrower"><rect class="box" x="30" y="158" width="210" height="114" rx="14"/>
+          <text class="nt" x="135" y="210" text-anchor="middle">Borrower</text>
+          <text class="ns" x="135" y="236" text-anchor="middle">issues the bond</text></g>
+        <g data-n="lender"><rect class="box" x="760" y="158" width="210" height="114" rx="14"/>
+          <text class="nt" x="865" y="210" text-anchor="middle">Investor</text>
+          <text class="ns" x="865" y="236" text-anchor="middle">lends the money</text></g>
+        <g data-n="contract"><rect class="box cbox" x="378" y="116" width="244" height="198" rx="14"/>
+          <text class="nt" x="500" y="148" text-anchor="middle">Smart contract</text>
+          <text class="sk" x="396" y="186">terms</text><text class="sv" data-v="nom" x="604" y="186" text-anchor="end">—</text>
+          <text class="sk" x="396" y="214">investor</text><text class="sv" data-v="lender" x="604" y="214" text-anchor="end">—</text>
+          <text class="sk" x="396" y="242">ID checked</text><text class="sv" data-v="kyc" x="604" y="242" text-anchor="end">no</text>
+          <text class="sk" x="396" y="270">money lent</text><text class="sv" data-v="cash" x="604" y="270" text-anchor="end">no</text>
+          <text class="sk" x="396" y="298">paid back</text><text class="sv" data-v="pay" x="604" y="298" text-anchor="end">no</text></g>
+        <g data-s="clock"><rect class="clockpill" x="414" y="398" width="172" height="36" rx="18"/><text class="clocktxt" x="500" y="421" text-anchor="middle">⏱ maturity date</text></g>
+        <circle class="coin" id="fdot" r="10" cx="0" cy="0" style="opacity:0"/>
+      </svg>
+      </div>
+      <div class="panel">
+        <div class="pips" id="pips"></div>
+        <span class="cap-num" id="capnum">6 steps</span>
+        <p class="cap-big" id="capbig">A loan, from start to end, run by code.</p>
+        <span class="cap-fn" id="capfn"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 WORRIES -->
+  <section class="slide" id="s6" aria-label="Slide 6: Investor worries" hidden>
+    <div class="head rise"><p class="eyebrow">The concerns</p><h2>But investors ask five questions</h2></div>
+    <div class="fill">
+      <div class="qs">
+        <div class="q" data-step="1"><span class="n">1 · Custody</span><h3>Who holds my keys?</h3><p class="stat">FTX, 2022: <b data-count="8" data-prefix="$" data-suffix="bn">$0bn</b> missing</p></div>
+        <div class="q" data-step="2"><span class="n">2 · Ownership</span><h3>Is the token legally mine?</h3></div>
+        <div class="q" data-step="3"><span class="n">3 · Code</span><h3>What if the code has a bug?</h3><p class="stat">Hacks, 2024: <b data-count="2.2" data-dec="1" data-prefix="$" data-suffix="bn">$0bn</b> stolen</p></div>
+        <div class="q" data-step="4"><span class="n">4 · Privacy</span><h3>Can everyone see my money?</h3></div>
+        <div class="q" data-step="5"><span class="n">5 · Exit</span><h3>Can I sell it or get cash back?</h3></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 OUR CODE SHOWS IT -->
+  <section class="slide" id="s7" aria-label="Slide 7: What our code shows" hidden>
+    <div class="head rise"><p class="eyebrow">What our code taught us</p><h2>Our own code shows two of these worries</h2></div>
+    <div class="fill">
+      <div class="two">
+        <div class="cw" data-step="1">
+          <p class="big">No undo button</p>
+          <code><span class="k">uint public immutable</span> fixedRate;</code>
+          <p>Once live, nothing can change. A bug or a lost key stays forever.</p>
+        </div>
+        <div class="cw" data-step="2">
+          <p class="big">No one to call</p>
+          <code><span class="k">require</span>(msg.sender == borrower);</code>
+          <p>Only the borrower can pay back. If they don't, the code can't force them.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 THE BALANCE -->
+  <section class="slide" id="s8" aria-label="Slide 8: The balance" hidden>
+    <div class="head rise"><p class="eyebrow">The balance</p><h2>Rules and a trusted custodian tip the scale</h2></div>
+    <span class="mode rise" style="--d:1" id="mode">Weighing…</span>
+    <div class="scale">
+      <div class="side ben">
+        <h3 class="rise" style="--d:2">Benefits</h3>
+        <div class="wts">
+          <div class="wt" data-step="1">Faster</div>
+          <div class="wt" data-step="1">Automatic</div>
+          <div class="wt" data-step="1">Transparent</div>
+          <div class="wt" data-step="1">Cheaper</div>
+        </div>
+      </div>
+      <svg class="sc rise" style="--d:2" viewBox="0 0 400 300" aria-label="A balance scale: benefits on the left, concerns on the right">
+        <path class="post" d="M190,90 L210,90 L222,270 L178,270 Z"/>
+        <rect class="post" x="130" y="268" width="140" height="14" rx="7"/>
+        <g id="beam" style="transform-origin:200px 90px; transition:transform 1.2s cubic-bezier(.4,1.6,.5,1)">
+          <rect class="beam" x="50" y="84" width="300" height="12" rx="6"/><circle class="beam" cx="200" cy="90" r="11"/>
+        </g>
+        <g id="panL" style="transition:transform 1.2s cubic-bezier(.4,1.6,.5,1)">
+          <line class="str" x1="0" y1="0" x2="-44" y2="90"/><line class="str" x1="0" y1="0" x2="44" y2="90"/>
+          <path class="dish b" d="M-56,90 L56,90 Q45,124 0,124 Q-45,124 -56,90 Z"/><text class="pl b" x="0" y="113" text-anchor="middle">Benefits</text>
+        </g>
+        <g id="panR" style="transition:transform 1.2s cubic-bezier(.4,1.6,.5,1)">
+          <line class="str" x1="0" y1="0" x2="-44" y2="90"/><line class="str" x1="0" y1="0" x2="44" y2="90"/>
+          <path class="dish c" d="M-56,90 L56,90 Q45,124 0,124 Q-45,124 -56,90 Z"/><text class="pl c" x="0" y="113" text-anchor="middle">Concerns</text>
+        </g>
+      </svg>
+      <div class="side cost">
+        <h3 class="rise" style="--d:2">Concerns</h3>
+        <div class="wts">
+          <div class="wt" data-step="1"><span class="txt">Keys</span><span class="fix">✓ regulated custodian</span></div>
+          <div class="wt" data-step="1"><span class="txt">Ownership</span><span class="fix">✓ Luxembourg blockchain laws</span></div>
+          <div class="wt" data-step="1"><span class="txt">Bugs</span><span class="fix">✓ audited code</span></div>
+          <div class="wt" data-step="1"><span class="txt">Privacy</span><span class="fix">✓ private, permissioned chain</span></div>
+          <div class="wt" data-step="1"><span class="txt">Exit</span></div>
+        </div>
+      </div>
+    </div>
+    <p class="verdict" data-step="2">Most worries can be fixed. <span class="hl">Exit is still the open question.</span></p>
+  </section>
+
+  <!-- 9 THREE QUESTIONS -->
+  <section class="slide" id="s9" aria-label="Slide 9: Three questions" hidden>
+    <div class="head rise"><p class="eyebrow">Our advice</p><h2>Before investing, ask three questions</h2></div>
+    <div class="fill" style="flex-direction:column;gap:3cqw">
+      <div class="road" id="road" data-p="0">
+        <div class="rail"><i></i></div>
+        <div class="ask" data-step="1"><span class="n">Question 1</span><h3>Is it mine?</h3><p>A clear law says the token is my asset.</p></div>
+        <div class="ask" data-step="2"><span class="n">Question 2</span><h3>Is it safe?</h3><p>A regulated firm holds the keys.</p></div>
+        <div class="ask" data-step="3"><span class="n">Question 3</span><h3>Can I get out?</h3><p>I can sell it or get cash back.</p></div>
+      </div>
+      <p class="bottom" data-step="4" style="width:100%">Fast code <span class="hl">+</span> a responsible party <span class="hl">=</span> investor trust</p>
+    </div>
+  </section>
+
+  <!-- 10 CLOSE -->
+  <section class="slide s-close" id="s10" aria-label="Slide 10: Thank you" hidden>
+    <p class="eyebrow rise">Thank you</p>
+    <h1 class="rise" style="--d:1">Questions?</h1>
+    <div class="recap rise" style="--d:2"><span><b>Promise:</b> faster, automatic</span><span><b>Worry:</b> keys, ownership, bugs</span><span><b>Fix:</b> rules + custodian</span></div>
+    <p class="srcs rise" style="--d:3">Sources: Regulation (EU) 2023/1114 (MiCA) · Regulation (EU) 2022/858 (DLT Pilot Regime) · Luxembourg Blockchain Laws I–IV (2019–2024) · GDPR (EU) 2016/679 · Chainalysis, 2025 Crypto Crime Report · FTX bankruptcy filings (2022–23) · BlackRock BUIDL public releases · Course material, A. Lovat, University of Luxembourg (2026)</p>
+  </section>
+
+  </div>
+  </div>
+
+  <nav class="nav" aria-label="Slides">
+    <button class="navbtn" id="prev">← Back</button>
+    <span class="count" id="count">1 / 10</span>
+    <button class="navbtn primary" id="next">Next →</button>
+    <button class="navbtn" id="ppbtn" aria-pressed="false">Presenter view</button>
+    <button class="navbtn" id="sheetbtn" aria-pressed="false">Cheat sheet</button>
+    <button class="navbtn" id="fsbtn">Full screen</button>
+  </nav>
+  <p class="hint"><kbd>→</kbd> / <kbd>Space</kbd> next click · <kbd>←</kbd> back · <kbd>P</kbd> presenter view · <kbd>F</kbd> full screen · <kbd>T</kbd> start/pause timer</p>
+</div>
+
+<aside class="pp" id="pp" hidden aria-label="Presenter notes">
+  <div class="pp-top">
+    <div class="who"><span class="av" id="ppav">1</span><div><div class="nm" id="ppwho">Speaker 1</div><div class="rl" id="pprole"></div></div></div>
+    <div class="clock" id="ppclock"><div class="el" id="ppel">0:00</div><div class="tg" id="pptg"></div></div>
+  </div>
+  <div class="slot"><span id="ppslot"></span><span class="bar"><i id="ppbar"></i></span></div>
+  <div class="timerrow"><button class="navbtn" id="tstart">Start timer</button><button class="navbtn" id="treset">Reset</button></div>
+  <h4>Say this</h4>
+  <ul class="say" id="ppsay"></ul>
+  <h4>Hand-off</h4>
+  <p class="hand" id="pphand"></p>
+  <div class="qa" id="ppqa" hidden><h4>Likely questions</h4></div>
+  <p class="nextup" id="ppnext"></p>
+</aside>
+</div>
+
+<section class="sheet" id="sheet" hidden aria-label="Cheat sheet">
+  <h2>Cheat sheet · Blockchain in asset servicing</h2>
+  <p class="meta" id="sheetmeta"></p>
+  <div class="grid" id="sheetgrid"></div>
+</section>
+
+<script>
+(function(){
+  /* ===== EDIT YOUR NAMES HERE ===== */
+  var SPEAKERS = ['Shohjahon Hakimov', 'Sofia Neves Gonçalves', 'Charis Thanasis'];
+  var COLORS = ['#2B5DA8', '#C76A0E', '#2E7D4F'];
+
+  /* Lines starting with "» click" mark a click; the text after the colon is what to say then. */
+  var NOTES = [
+    { who:0, t:30, title:'Title',
+      say:['Hello, we are Shohjahon, Sofia and Charis, Group 6.',
+           'Our topic: blockchain in asset servicing. What are the major concerns for investors?',
+           'Short answer: investors like the speed, but they worry about trust. We will show both.'],
+      hand:'“First, what does asset servicing mean?”' },
+    { who:0, t:50, title:'What is asset servicing?',
+      say:['Imagine you buy a bond. Buying takes one second. But then a lot must happen, for years. That is asset servicing.',
+           '» click: Keep it safe. Someone must hold your bond for you. That is called custody.',
+           '» click: Move it. When you buy or sell, the bond and the cash must change hands. That is settlement.',
+           '» click: Pay you. The bond pays interest, called a coupon. Someone must send it to you.',
+           '» click: Report. You get statements, and you can vote as a shareholder.'],
+      hand:'“So who does all this today?”' },
+    { who:0, t:70, title:'Today vs blockchain',
+      say:['» click: Today, the money travels through a long chain: your bank, a custodian, a central securities depository (CSD), a paying agent. Watch the clock: it takes about two days. This is called T+2.',
+           'Every middleman keeps its own records and takes a fee.',
+           '» click: On blockchain, everyone shares one ledger. A smart contract, a small program, moves the money directly. It takes minutes.'],
+      hand:'“So what does this promise to investors?”' },
+    { who:0, t:40, title:'The promise',
+      say:['» click: Faster: minutes instead of days.',
+           '» click: Automatic: the code pays the coupon on the right day.',
+           '» click: Transparent: one shared record everyone can check.',
+           '» click: Cheaper: fewer middlemen, fewer fees. A real example: BlackRock\'s tokenized fund BUIDL already pays its investors on-chain.'],
+      hand:'“To test this ourselves, we built one. [Speaker 2] will show it.”' },
+    { who:1, t:90, title:'Our smart contract',
+      say:['In class we wrote a smart contract in Solidity. It works like a simple bond: a borrower gets money and pays it back with interest.',
+           '» click 1: The borrower creates the contract: 10 ETH, 5% interest, and a date to pay back.',
+           '» click 2: An investor joins. The code does not let the borrower lend to themselves.',
+           '» click 3: Both confirm their identity. This is called KYC, know your customer. No money moves before this.',
+           '» click 4: The investor sends 10 ETH. The contract passes it to the borrower in seconds.',
+           '» click 5: Time passes. The code refuses payback before the date.',
+           '» click 6: The borrower pays back 10.5 ETH: the 10 plus 5% interest. The investor gets it at once.',
+           'No custodian, no paying agent. The code did the servicing.'],
+      hand:'“Sounds perfect. But investors still worry.”' },
+    { who:1, t:70, title:'Five investor worries',
+      say:['» click: Custody. On blockchain, whoever has the private key, like a password, owns the asset. When the crypto exchange FTX failed in 2022, about 8 billion dollars of customer money was missing.',
+           '» click: Ownership. Does the token really make me the legal owner? Which law applies?',
+           '» click: Code. A bug can pay the wrong amount. In 2024, hackers stole 2.2 billion dollars from crypto platforms.',
+           '» click: Privacy. On a public blockchain, everyone can see every payment.',
+           '» click: Exit. Can I find a buyer, or get my cash back when I want?'],
+      hand:'“[Speaker 3] will show that our own code has these problems too.”' },
+    { who:2, t:50, title:'What our code shows',
+      say:['We found two of these worries in our own contract.',
+           '» click: No undo button. The interest rate is "immutable": it can never change. If we made a mistake, or someone loses their key, nothing can fix it.',
+           '» click: No one to call. Only the borrower can start the payback. If they never do, the code cannot force them. In a bank, someone would chase the payment.'],
+      hand:'“So, do the benefits win, or the worries?”' },
+    { who:2, t:50, title:'The balance',
+      say:['» click: On a public blockchain with nobody in charge, the worries are heavier. The scale tips to concerns.',
+           '» click: Now add rules and a trusted, regulated custodian. Luxembourg\'s blockchain laws make tokens legal assets. Audits catch bugs. A private chain protects privacy. Most worries go away, and the scale tips to benefits.',
+           'Only one stays open: exit. There are still few places to sell these tokens.'],
+      hand:'“So here is our advice.”' },
+    { who:2, t:40, title:'Three questions',
+      say:['Before you invest in a tokenized asset, ask three questions.',
+           '» click: Is it mine? A clear law says the token is my asset.',
+           '» click: Is it safe? A regulated company holds the keys.',
+           '» click: Can I get out? I can sell it or get cash back.',
+           '» click: Our conclusion: fast code plus a responsible party equals investor trust.'],
+      hand:'“Thank you. We are happy to take your questions.”' },
+    { who:-1, t:0, title:'Thank you · Q&A',
+      say:['Everyone says thank you. Whoever covered the topic answers first.'],
+      hand:'Answer in one sentence, then give one example.',
+      qa:[
+        ['Why do we still need a custodian?', 'On blockchain, the private key is the asset. If you lose it, the asset is gone. A regulated custodian keeps keys safe and separate, like a bank vault.'],
+        ['Is a token legally an asset in Luxembourg?', 'Yes. Luxembourg\'s blockchain laws (2019 to 2024) allow securities to be issued and held on a blockchain.'],
+        ['What if the borrower never pays back?', 'Our code cannot force it. Real systems add collateral, a legal contract, or an agent who chases the payment.'],
+        ['What about GDPR?', 'Keep personal data off the blockchain. Store only a fingerprint (hash) on-chain, so the data can still be deleted.'],
+        ['How does your interest formula work?', 'Payback = nominal + nominal × rate / 100. With 10 ETH at 5%, that is 10.5 ETH, and only after the maturity date.'],
+        ['Why is exit still a problem?', 'Tokens sit on many blockchains that do not connect, and few regulated markets trade them yet. The EU DLT Pilot Regime is testing this.']
+      ] }
+  ];
+
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var $ = function(s, r){ return (r || document).querySelector(s); };
+  var $$ = function(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var fmt = function(s){ s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); };
+  var store = { get:function(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }, set:function(k, v){ try { localStorage.setItem(k, v); } catch(e){} } };
+  var nameFix = function(t){ return t.replace(/\[Speaker (\d)\]/g, function(_, d){ return SPEAKERS[d - 1]; }); };
+  $$('[data-spk]').forEach(function(e){ e.textContent = SPEAKERS[+e.getAttribute('data-spk')]; });
+
+  /* ---------- animation helpers ---------- */
+  var rafs = [];
+  function stopAnims(){ rafs.forEach(cancelAnimationFrame); rafs = []; }
+  function along(path, dot, dur, onP, done){
+    var L = path.getTotalLength(), t0 = performance.now();
+    dot.style.opacity = 1;
+    function tick(t){
+      var f = Math.min(1, (t - t0) / dur), e = f < .5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2, pt = path.getPointAtLength(e * L);
+      dot.setAttribute('cx', pt.x); dot.setAttribute('cy', pt.y); if (onP) onP(e);
+      if (f < 1) rafs.push(requestAnimationFrame(tick)); else if (done) done();
+    }
+    rafs.push(requestAnimationFrame(tick));
+  }
+  function countUp(el){
+    var to = parseFloat(el.getAttribute('data-count')), dec = +(el.getAttribute('data-dec') || 0);
+    var pre = el.getAttribute('data-prefix') || '', suf = el.getAttribute('data-suffix') || '';
+    if (reduce){ el.textContent = pre + to.toFixed(dec) + suf; return; }
+    var t0 = performance.now();
+    (function tick(t){ var f = Math.min(1, (t - t0) / 1300), e = 1 - Math.pow(1 - f, 3);
+      el.textContent = pre + (to * e).toFixed(dec) + suf; if (f < 1) requestAnimationFrame(tick); })(t0);
+  }
+  function countFinal(el){ var d = +(el.getAttribute('data-dec') || 0); el.textContent = (el.getAttribute('data-prefix') || '') + parseFloat(el.getAttribute('data-count')).toFixed(d) + (el.getAttribute('data-suffix') || ''); }
+
+  /* ---------- slide 3: the race ---------- */
+  function race(k, animate){
+    var svg = $('#race'), c1 = $('#c1'), c2 = $('#c2'), t1 = $('#t1'), t2 = $('#t2'), sts = $$('.st', svg), st2 = $$('.st2', svg);
+    var lane2 = $('[data-s="lane2"]', svg);
+    function mark1(e){ sts.forEach(function(g, i){ g.classList.toggle('done', e * 5 >= i - .02); }); t1.textContent = Math.round(e * 48) + ' h'; }
+    function end1(){ mark1(1); t1.textContent = '≈ 2 days'; c1.style.opacity = 0; }
+    lane2.classList.toggle('show', k >= 2);
+    if (k < 1){ sts.forEach(function(g){ g.classList.remove('done'); }); t1.textContent = '0 h'; c1.style.opacity = 0; }
+    if (k < 2){ st2.forEach(function(g){ g.classList.remove('done'); }); t2.textContent = ''; c2.style.opacity = 0; }
+    if (k === 1){ if (animate && !reduce) along($('#p1'), c1, 5200, mark1, end1); else end1(); }
+    if (k >= 2){
+      end1();
+      var end2 = function(){ st2.forEach(function(g){ g.classList.add('done'); }); t2.textContent = '≈ minutes'; c2.style.opacity = 0; };
+      if (animate && !reduce) along($('#p2'), c2, 1100, function(e){ st2.forEach(function(g, i){ g.classList.toggle('done', e * 2 >= i - .02); }); }, end2); else end2();
+    }
+  }
+
+  /* ---------- slide 5: contract flow ---------- */
+  var FLOW = [
+    { big:'The borrower creates the bond.', fn:'constructor(10 ETH, 5%, date)', nodes:['borrower','contract'], edges:['e1'], show:['l1'], v:{ nom:'10 ETH · 5%' } },
+    { big:'An investor joins.', fn:'registerAsLender()', nodes:['lender','contract'], edges:['e2'], show:['l2'], v:{ lender:'joined' } },
+    { big:'Both prove who they are.', fn:'approveKYC()', nodes:['borrower','lender','contract'], edges:['e3a','e3b'], show:['l3'], v:{ kyc:'yes' } },
+    { big:'Money moves in seconds.', fn:'lendCash()', nodes:['lender','contract','borrower'], edges:['e4a','e4b'], show:['l4'], v:{ cash:'yes' }, money:true },
+    { big:'The code waits for the date.', fn:'block.timestamp ≥ maturityDate', nodes:['contract'], edges:[], show:['clock'], v:{} },
+    { big:'Paid back with interest.', fn:'paybackCashAndCoupon()', nodes:['borrower','contract','lender'], edges:['e6a','e6b'], show:['l6'], v:{ pay:'yes' }, money:true }
+  ];
+  var flow = (function(){
+    var root = $('#flow'), svg = $('svg', root), dot = $('#fdot');
+    var pips = $('#pips'); FLOW.forEach(function(){ pips.appendChild(document.createElement('i')); });
+    var intro = { num:$('#capnum').textContent, big:$('#capbig').textContent };
+    function mark(e, st){ e.setAttribute('marker-end', 'url(#m-' + st + ')'); }
+    function runEdges(edges, k, money){
+      if (k >= edges.length){ dot.style.opacity = 0; return; }
+      dot.classList.toggle('g', !!money);
+      along(edges[k], dot, Math.min(1400, Math.max(700, edges[k].getTotalLength() * 2.4)), null, function(){ runEdges(edges, k + 1, money); });
+    }
+    function show(i, animate){
+      dot.style.opacity = 0;
+      $$('[data-n]', svg).forEach(function(n){ n.classList.remove('on', 'done'); });
+      $$('.edge', svg).forEach(function(e){ e.classList.remove('on', 'done'); mark(e, 'off'); });
+      $$('[data-s]', svg).forEach(function(e){ e.classList.remove('show'); });
+      var vals = { nom:'—', lender:'—', kyc:'no', cash:'no', pay:'no' }, set = {};
+      for (var k = 0; k <= i; k++){
+        var st = FLOW[k], last = (k === i);
+        st.nodes.forEach(function(id){ var n = svg.querySelector('[data-n="' + id + '"]'); n.classList.remove('done'); n.classList.add(last ? 'on' : 'done'); });
+        st.edges.forEach(function(id){ var e = svg.querySelector('[data-e="' + id + '"]'); e.classList.remove('done'); e.classList.add(last ? 'on' : 'done'); mark(e, last ? (st.money ? 'money' : 'on') : 'done'); });
+        st.show.forEach(function(id){ $$('[data-s="' + id + '"]', svg).forEach(function(x){ x.classList.add('show'); }); });
+        for (var key in st.v){ vals[key] = st.v[key]; set[key] = true; }
+      }
+      $$('[data-v]', svg).forEach(function(t){ var key = t.getAttribute('data-v'); t.textContent = vals[key]; t.classList.toggle('set', !!set[key]); });
+      $$('i', pips).forEach(function(p, j){ p.className = j < i ? 'done' : (j === i ? 'on' : ''); });
+      if (i < 0){ $('#capnum').textContent = intro.num; $('#capbig').textContent = intro.big; $('#capfn').textContent = ''; return; }
+      $('#capnum').textContent = 'Step ' + (i + 1) + ' of ' + FLOW.length;
+      $('#capbig').textContent = FLOW[i].big; $('#capfn').textContent = FLOW[i].fn;
+      if (animate && !reduce && FLOW[i].edges.length) runEdges(FLOW[i].edges.map(function(id){ return svg.querySelector('[data-e="' + id + '"]'); }), 0, FLOW[i].money);
+    }
+    return { show:show };
+  })();
+
+  /* ---------- slide 8: scale ---------- */
+  function tilt(deg){
+    var r = deg * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
+    $('#beam').style.transform = 'rotate(' + deg + 'deg)';
+    $('#panL').style.transform = 'translate(' + (200 - 140 * c) + 'px,' + (90 - 140 * s) + 'px)';
+    $('#panR').style.transform = 'translate(' + (200 + 140 * c) + 'px,' + (90 + 140 * s) + 'px)';
+  }
+  tilt(0);
+
+  var HOOKS = {
+    s3: race,
+    s5: function(k, animate){ flow.show(k - 1, animate); },
+    s8: function(k){
+      var mode = $('#mode');
+      mode.className = 'mode' + (k === 1 ? ' pub' : k >= 2 ? ' perm' : '');
+      mode.textContent = k === 0 ? 'Weighing…' : k === 1 ? 'Public blockchain, nobody in charge' : 'With rules + a trusted custodian';
+      $$('#s8 .side.cost .wt').forEach(function(w){ w.classList.toggle('eased', k >= 2 && !!$('.fix', w)); });
+      tilt(k === 0 ? 0 : k === 1 ? 14 : -12);
+    },
+    s9: function(k){ $('#road').setAttribute('data-p', Math.min(k, 3)); }
+  };
+  var EXTRA = { s3:2, s8:2 };
+
+  /* ---------- navigation ---------- */
+  var slides = $$('.slide'), cur = 0, beat = 0, slideStart = Date.now();
+  function beatsOf(s){
+    if (s.id === 's5') return FLOW.length;
+    var m = EXTRA[s.id] || 0; $$('[data-step]', s).forEach(function(e){ m = Math.max(m, +e.getAttribute('data-step')); }); return m;
+  }
+  function setBeat(k, animate){
+    var s = slides[cur]; beat = k; stopAnims();
+    $$('[data-step]', s).forEach(function(e){
+      var on = +e.getAttribute('data-step') <= k, was = e.classList.contains('in');
+      e.classList.toggle('in', on); e.classList.toggle('pop', on && !was && animate);
+      var counts = $$('[data-count]', e);
+      if (on && !was && animate) counts.forEach(countUp); else if (on) counts.forEach(countFinal);
+    });
+    if (HOOKS[s.id]) HOOKS[s.id](k, animate);
+    updatePresenter(); broadcast();
+  }
+  function go(n, atEnd, quiet){
+    n = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function(s, i){ s.hidden = (i !== n); s.classList.remove('enter'); });
+    cur = n; void slides[n].offsetWidth; slides[n].classList.add('enter');
+    $('#count').textContent = (n + 1) + ' / ' + slides.length;
+    $('#prev').disabled = (n === 0);
+    slideStart = Date.now();
+    setBeat(atEnd ? beatsOf(slides[n]) : 0, false);
+    if (!quiet) try { history.replaceState(null, '', '#s' + (n + 1)); } catch (e) {}
+  }
+  function next(){ if (beat < beatsOf(slides[cur])) setBeat(beat + 1, true); else if (cur < slides.length - 1) go(cur + 1); }
+  function prev(){ if (beat > 0) setBeat(beat - 1, false); else if (cur > 0) go(cur - 1, true); }
+
+  /* ---------- presenter panel ---------- */
+  var ppOn = false, tStart = 0, tAcc = 0, running = false;
+  var cumul = []; NOTES.reduce(function(a, n, i){ cumul[i] = a + n.t; return cumul[i]; }, 0);
+  var TOTAL = cumul[NOTES.length - 1];
+  function elapsed(){ return (tAcc + (running ? Date.now() - tStart : 0)) / 1000; }
+  function updatePresenter(){
+    var n = NOTES[cur], who = n.who, nb = beatsOf(slides[cur]);
+    var av = $('#ppav'); av.textContent = who < 0 ? 'All' : String(who + 1); av.style.background = who < 0 ? '#14203A' : COLORS[who]; av.style.fontSize = who < 0 ? '13px' : '17px';
+    $('#ppwho').textContent = who < 0 ? 'Everyone' : SPEAKERS[who];
+    $('#pprole').textContent = 'Slide ' + (cur + 1) + ' of ' + slides.length + ' · ' + n.title + (nb ? ' · click ' + beat + '/' + nb : '');
+    var ul = $('#ppsay'); ul.innerHTML = ''; var clickNo = 0;
+    n.say.forEach(function(line){
+      var li = document.createElement('li'), m = /^» (click(?: \d+)?)(?::\s?(.*))?$/.exec(line);
+      if (m){
+        clickNo++;
+        li.className = 'cl' + (clickNo <= beat ? ' done' : clickNo === beat + 1 ? ' nextc' : '');
+        var chip = document.createElement('span'); chip.className = 'chipc'; chip.textContent = '→ click ' + clickNo;
+        li.appendChild(chip); li.appendChild(document.createTextNode(' ' + nameFix(m[2] || '')));
+      } else li.textContent = nameFix(line);
+      ul.appendChild(li);
+    });
+    $('#pphand').textContent = nameFix(n.hand);
+    var qa = $('#ppqa'); $$('details', qa).forEach(function(d){ d.remove(); }); qa.hidden = !n.qa;
+    (n.qa || []).forEach(function(p){ var d = document.createElement('details'), s = document.createElement('summary'), a = document.createElement('p'); s.textContent = p[0]; a.textContent = p[1]; d.appendChild(s); d.appendChild(a); qa.appendChild(d); });
+    var nx = NOTES[cur + 1], np = $('#ppnext'); np.innerHTML = '';
+    if (nx){ np.appendChild(document.createTextNode('Next: ')); var b = document.createElement('b'); b.textContent = nx.title; np.appendChild(b);
+      np.appendChild(document.createTextNode(' · ' + (nx.who < 0 ? 'everyone' : SPEAKERS[nx.who]) + (nx.who !== n.who && nx.who >= 0 ? ' takes over' : ''))); }
+    else np.textContent = 'Last slide.';
+    tickClock();
+  }
+  function tickClock(){
+    var e = elapsed(), n = NOTES[cur];
+    $('#ppel').textContent = fmt(e);
+    $('#pptg').textContent = (running ? '' : 'paused · ') + 'by end of slide ' + fmt(cumul[cur]) + ' · total ' + fmt(TOTAL);
+    var c = $('#ppclock'); c.classList.toggle('over', running && e > cumul[cur] + 10); c.classList.toggle('ok', running && e <= cumul[cur]);
+    var spent = (Date.now() - slideStart) / 1000;
+    $('#ppslot').textContent = n.t ? 'this slide ' + fmt(spent) + ' / ' + fmt(n.t) : 'Q&A';
+    var bar = $('#ppbar'); bar.style.width = n.t ? Math.min(100, spent / n.t * 100) + '%' : '0'; bar.classList.toggle('over', !!n.t && spent > n.t);
+  }
+  setInterval(function(){ if (ppOn) tickClock(); }, 500);
+  function toggleTimer(){
+    if (running){ tAcc += Date.now() - tStart; running = false; } else { tStart = Date.now(); running = true; slideStart = Date.now(); }
+    $('#tstart').textContent = running ? 'Pause timer' : 'Start timer'; tickClock();
+  }
+  function setPresenter(on){
+    ppOn = on; document.body.classList.toggle('presenter', on); $('#pp').hidden = !on;
+    $('#ppbtn').setAttribute('aria-pressed', on ? 'true' : 'false'); store.set('as-pp', on ? '1' : '0'); updatePresenter();
+  }
+
+  /* ---------- cheat sheet ---------- */
+  (function(){
+    var g = $('#sheetgrid');
+    $('#sheetmeta').textContent = 'Target ' + fmt(TOTAL) + ' + Q&A. ' + SPEAKERS.map(function(s, i){
+      return s + ' ' + fmt(NOTES.filter(function(n){ return n.who === i; }).reduce(function(a, n){ return a + n.t; }, 0)); }).join(' · ') + '. Print with Ctrl/Cmd + P.';
+    NOTES.forEach(function(n, i){
+      var c = document.createElement('div'); c.className = 'sc-card';
+      var t = document.createElement('div'); t.className = 't';
+      var a = document.createElement('span'); a.textContent = (i + 1) + ' · ' + (n.who < 0 ? 'Everyone' : SPEAKERS[n.who]);
+      var b = document.createElement('span'); b.textContent = n.t ? fmt(n.t) + ' → ' + fmt(cumul[i]) : 'Q&A';
+      t.appendChild(a); t.appendChild(b); c.appendChild(t);
+      var h = document.createElement('h3'); h.textContent = n.title; c.appendChild(h);
+      var ul = document.createElement('ul');
+      n.say.forEach(function(l){ var li = document.createElement('li'); li.textContent = nameFix(l.replace(/^» click( \d+)?: ?/, '→ ')); ul.appendChild(li); });
+      (n.qa || []).forEach(function(p){ var li = document.createElement('li'); var q = document.createElement('b'); q.textContent = p[0] + ' '; li.appendChild(q); li.appendChild(document.createTextNode(p[1])); ul.appendChild(li); });
+      c.appendChild(ul);
+      var hp = document.createElement('p'); hp.className = 'h'; hp.textContent = 'Hand-off: ' + nameFix(n.hand); c.appendChild(hp);
+      g.appendChild(c);
+    });
+  })();
+
+  /* ---------- two windows stay in sync ---------- */
+  var bc = null, fromRemote = false;
+  try { bc = new BroadcastChannel('asset-servicing-deck'); bc.onmessage = function(ev){ var d = ev.data || {}; fromRemote = true; if (d.s !== cur) go(d.s, false, true); setBeat(d.b, true); fromRemote = false; }; } catch (e) {}
+  function broadcast(){ if (bc && !fromRemote) try { bc.postMessage({ s:cur, b:beat }); } catch (e) {} }
+
+  /* ---------- controls ---------- */
+  function fullscreen(){
+    var w = $('#stagewrap');
+    try { if (document.fullscreenElement) document.exitFullscreen(); else if (w.requestFullscreen){ var p = w.requestFullscreen(); if (p && p.catch) p.catch(function(){}); } } catch (e) {}
+  }
+  $('#prev').addEventListener('click', prev);
+  $('#next').addEventListener('click', next);
+  $('#stage').addEventListener('click', function(e){ if (!e.target.closest('button,a,summary')) next(); });
+  $('#ppbtn').addEventListener('click', function(){ setPresenter(!ppOn); });
+  $('#sheetbtn').addEventListener('click', function(){ var s = $('#sheet'); s.hidden = !s.hidden; this.setAttribute('aria-pressed', s.hidden ? 'false' : 'true'); if (!s.hidden) s.scrollIntoView({ behavior:'smooth' }); });
+  $('#fsbtn').addEventListener('click', fullscreen);
+  $('#tstart').addEventListener('click', toggleTimer);
+  $('#treset').addEventListener('click', function(){ running = false; tAcc = 0; $('#tstart').textContent = 'Start timer'; tickClock(); });
+  document.addEventListener('keydown', function(e){
+    var t = e.target && e.target.tagName; if (t === 'INPUT' || t === 'TEXTAREA' || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' '){ next(); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ prev(); e.preventDefault(); }
+    else if (e.key === 'p' || e.key === 'P') setPresenter(!ppOn);
+    else if (e.key === 'f' || e.key === 'F') fullscreen();
+    else if (e.key === 't' || e.key === 'T') toggleTimer();
+  });
+
+  var m = /^#s(\d+)$/.exec(location.hash || '');
+  go(m ? parseInt(m[1], 10) - 1 : 0);
+  if (store.get('as-pp') === '1') setPresenter(true);
+})();
+</script>
+</body>
+</html>

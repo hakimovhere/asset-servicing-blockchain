@@ -150,6 +150,36 @@ svg [data-step]{ transform-box:fill-box; transform-origin:center; }
 .cap-big{ font:700 2.3cqw/1.2 var(--font-d); min-height:2.4em; }
 .cap-fn{ font:600 var(--t-small)/1.3 var(--font-m); color:var(--muted); min-height:1.3em; }
 
+/* ---------- test-run terminal (slide 5, click 7) ---------- */
+.split{ position:relative; }
+.term{ position:absolute; inset:0; background:#0E1626; color:#E7ECF5; border-radius:14px; padding:2cqw 2.6cqw; display:flex; flex-direction:column; gap:.5cqw; box-shadow:0 1cqw 3cqw rgba(20,32,58,.35); z-index:2; }
+.term .ttl{ font:700 2.3cqw/1.2 var(--font-d); color:#FFFFFF; margin-bottom:.4cqw; }
+.term .ln{ font:500 1.3cqw/1.35 var(--font-m); opacity:0; transform:translateX(-10px); }
+.term.in .ln{ animation:lnin .35s ease forwards; animation-delay:calc(var(--k) * 260ms + 250ms); }
+@keyframes lnin{ to{ opacity:1; transform:none; } }
+.term .sub{ color:#A4AEC4; }
+.term .ok{ color:#62C48F; font-weight:600; } .term .no{ color:#F2766B; font-weight:600; } .term .msg{ color:#A4AEC4; }
+.term b{ color:#F2A14A; }
+.term .sum{ margin-top:.6cqw; padding-top:.7cqw; border-top:1px solid #2B3754; font-size:1.5cqw; }
+
+/* ---------- ranking ---------- */
+.q.top{ border-width:3px; box-shadow:0 0 0 .5cqw rgba(180,35,24,.12); }
+.q.low{ opacity:.85; }
+.q .badge{ font:700 var(--t-tiny)/1 var(--font-b); font-style:normal; color:#FFFFFF; background:var(--bad); padding:.3em .6em; border-radius:999px; margin-left:.5em; vertical-align:1px; }
+
+/* ---------- already real ---------- */
+.reals{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--gap); width:100%; }
+.real{ border:1px solid var(--line); border-radius:16px; padding:2cqw; background:var(--surface-2); display:flex; flex-direction:column; gap:.7cqw; }
+.real .when{ font:600 var(--t-small)/1 var(--font-m); color:var(--accent); }
+.real .rbig{ font:700 3.6cqw/1 var(--font-d); color:var(--ink); font-variant-numeric:tabular-nums; }
+.real p{ font-size:var(--t-body); line-height:1.3; }
+.real .how{ font-size:var(--t-small); color:var(--muted); }
+.fixes{ display:flex; gap:.5cqw; flex-wrap:wrap; margin-top:auto; }
+.fixes span{ font:700 var(--t-small)/1 var(--font-b); color:var(--good); background:var(--good-soft); border:1px solid var(--good); padding:.45em .8em; border-radius:999px; opacity:0; transform:scale(.7); }
+.real.in .fixes span{ animation:fixin .45s cubic-bezier(.3,1.6,.5,1) forwards; animation-delay:.7s; }
+.real.in .fixes span + span{ animation-delay:.9s; }
+@keyframes fixin{ to{ opacity:1; transform:none; } }
+
 /* ---------- code worries ---------- */
 .two{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:calc(var(--gap)*1.5); width:100%; }
 .cw{ border:1px solid var(--line); border-radius:16px; padding:2.4cqw; background:var(--surface-2); display:flex; flex-direction:column; gap:1.4cqw; }
@@ -270,7 +300,8 @@ svg [data-step]{ transform-box:fill-box; transform-origin:center; }
   .road .rail,.ask::before{ display:none; } .road{ padding-top:0; }
   .presenter .deck{ display:flex; } .pp{ position:static; max-height:none; }
 }
-@media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
+@media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } .term .ln, .fixes span{ opacity:1; transform:none; } }
+@media (max-width:760px){ .reals{ grid-template-columns:1fr; } .real .rbig{ font-size:30px; } .term{ position:relative; inset:auto; } .term .ln{ font-size:13px; } .term .ttl{ font-size:20px; } }
 @media print{ .main,.pp{ display:none !important; } .sheet{ display:block !important; width:100%; margin:0; padding:0; } body{ background:#fff; } }
 </style>
 </head>
@@ -418,19 +449,33 @@ svg [data-step]{ transform-box:fill-box; transform-origin:center; }
         <p class="cap-big" id="capbig">A loan, from start to end, run by code.</p>
         <span class="cap-fn" id="capfn"></span>
       </div>
+      <div class="term" data-step="7" aria-label="Test run results">
+        <p class="ttl">We ran it. Every rule held.</p>
+        <p class="ln sub" style="--k:0">$ npx hardhat run simpleLoan · local Ethereum test network</p>
+        <p class="ln" style="--k:1"><span class="ok">✓</span> deploy · 10 ETH · 5% · 30 days</p>
+        <p class="ln" style="--k:2"><span class="no">✗</span> borrower lends to itself <span class="msg">→ “the lender cannot be the borrower”</span></p>
+        <p class="ln" style="--k:3"><span class="ok">✓</span> investor joins · registerAsLender()</p>
+        <p class="ln" style="--k:4"><span class="no">✗</span> money sent before ID check <span class="msg">→ “KYC not approved yet”</span></p>
+        <p class="ln" style="--k:5"><span class="ok">✓</span> both ID checks · approveKYC() × 2</p>
+        <p class="ln" style="--k:6"><span class="ok">✓</span> lendCash() · borrower receives <b>10.0 ETH</b></p>
+        <p class="ln" style="--k:7"><span class="no">✗</span> payback on day 0 <span class="msg">→ “Not the right time to pay back”</span></p>
+        <p class="ln" style="--k:8"><span class="ok">✓</span> day 30 · paybackCashAndCoupon() · investor receives <b>10.5 ETH</b></p>
+        <p class="ln" style="--k:9"><span class="no">✗</span> pay back twice <span class="msg">→ “Pay back already done”</span></p>
+        <p class="ln sum" style="--k:10"><span class="ok">6 done</span> · <span class="no">4 wrong moves blocked by our code</span></p>
+      </div>
     </div>
   </section>
 
   <!-- 6 WORRIES -->
   <section class="slide" id="s6" aria-label="Slide 6: Investor worries" hidden>
-    <div class="head rise"><p class="eyebrow">The concerns</p><h2>But investors ask five questions</h2></div>
+    <div class="head rise"><p class="eyebrow">The concerns, ranked</p><h2>Five worries, ranked by how much you can lose</h2></div>
     <div class="fill">
       <div class="qs">
-        <div class="q" data-step="1"><span class="n">1 · Custody</span><h3>Who holds my keys?</h3><p class="stat">FTX, 2022: <b data-count="8" data-prefix="$" data-suffix="bn">$0bn</b> missing</p></div>
-        <div class="q" data-step="2"><span class="n">2 · Ownership</span><h3>Is the token legally mine?</h3></div>
-        <div class="q" data-step="3"><span class="n">3 · Code</span><h3>What if the code has a bug?</h3><p class="stat">Hacks, 2024: <b data-count="2.2" data-dec="1" data-prefix="$" data-suffix="bn">$0bn</b> stolen</p></div>
-        <div class="q" data-step="4"><span class="n">4 · Privacy</span><h3>Can everyone see my money?</h3></div>
-        <div class="q" data-step="5"><span class="n">5 · Exit</span><h3>Can I sell it or get cash back?</h3></div>
+        <div class="q top" data-step="1"><span class="n">#1 · Custody <i class="badge">Biggest</i></span><h3>Who holds my keys?</h3><p class="stat">FTX, 2022: <b data-count="8.9" data-dec="1" data-prefix="$" data-suffix="bn">$0bn</b> missing</p></div>
+        <div class="q" data-step="2"><span class="n">#2 · Ownership</span><h3>Is the token legally mine?</h3></div>
+        <div class="q" data-step="3"><span class="n">#3 · Code</span><h3>What if the code has a bug?</h3><p class="stat">Hacks, 2024: <b data-count="2.2" data-dec="1" data-prefix="$" data-suffix="bn">$0bn</b> stolen</p></div>
+        <div class="q" data-step="4"><span class="n">#4 · Exit</span><h3>Can I sell it or get cash back?</h3></div>
+        <div class="q low" data-step="5"><span class="n">#5 · Privacy</span><h3>Can everyone see my money?</h3></div>
       </div>
     </div>
   </section>
@@ -494,7 +539,38 @@ svg [data-step]{ transform-box:fill-box; transform-origin:center; }
         </div>
       </div>
     </div>
-    <p class="verdict" data-step="2">Most worries can be fixed. <span class="hl">Exit is still the open question.</span></p>
+    <p class="verdict" data-step="2">Most worries can be fixed. <span class="hl">Exit is the slowest to fix.</span></p>
+  </section>
+
+  <!-- 9 ALREADY REAL -->
+  <section class="slide" id="sreal" aria-label="Slide 9: Already real" hidden>
+    <div class="head rise"><p class="eyebrow">Already real · in Luxembourg</p><h2>Already happening, with a custodian in the loop</h2></div>
+    <div class="fill" style="flex-direction:column;gap:2cqw">
+      <div class="reals">
+        <div class="real" data-step="1">
+          <span class="when">Luxembourg State · Oct 2026</span>
+          <b class="rbig" data-count="1.7" data-dec="1" data-prefix="€" data-suffix="bn">€0bn</b>
+          <p>10-year bond, issued <b>natively on blockchain</b></p>
+          <p class="how">LuxCSD · Clearstream D7 DLT · listed on LuxSE</p>
+          <div class="fixes"><span>✓ Ownership</span><span>✓ Exit</span></div>
+        </div>
+        <div class="real" data-step="2">
+          <span class="when">EIB · Nov 2022</span>
+          <b class="rbig" data-count="100" data-prefix="€" data-suffix="m">€0m</b>
+          <p>first digital bond <b>under Luxembourg law</b></p>
+          <p class="how">private blockchain · paid in tokenized central-bank money</p>
+          <div class="fixes"><span>✓ Ownership</span><span>✓ Privacy</span></div>
+        </div>
+        <div class="real" data-step="3">
+          <span class="when">BlackRock BUIDL · Mar 2024</span>
+          <b class="rbig">Ethereum</b>
+          <p>tokenized fund on a <b>public</b> blockchain</p>
+          <p class="how">BNY Mellon = custodian · Securitize = transfer agent</p>
+          <div class="fixes"><span>✓ Custody</span></div>
+        </div>
+      </div>
+      <p class="bottom" data-step="4" style="width:100%">Same pattern every time: <span class="hl">blockchain for speed</span>, <span class="hl">a regulated party for trust</span></p>
+    </div>
   </section>
 
   <!-- 9 THREE QUESTIONS -->
@@ -516,7 +592,7 @@ svg [data-step]{ transform-box:fill-box; transform-origin:center; }
     <p class="eyebrow rise">Thank you</p>
     <h1 class="rise" style="--d:1">Questions?</h1>
     <div class="recap rise" style="--d:2"><span><b>Promise:</b> faster, automatic</span><span><b>Worry:</b> keys, ownership, bugs</span><span><b>Fix:</b> rules + custodian</span></div>
-    <p class="srcs rise" style="--d:3">Sources: Regulation (EU) 2023/1114 (MiCA) · Regulation (EU) 2022/858 (DLT Pilot Regime) · Luxembourg Blockchain Laws I–IV (2019–2024) · GDPR (EU) 2016/679 · Chainalysis, 2025 Crypto Crime Report · FTX bankruptcy filings (2022–23) · BlackRock BUIDL public releases · Course material, A. Lovat, University of Luxembourg (2026)</p>
+    <p class="srcs rise" style="--d:3">Sources: Regulation (EU) 2023/1114 (MiCA) · Regulation (EU) 2022/858 (DLT Pilot Regime) · Luxembourg Blockchain Laws I–IV (2019–2024) · GDPR (EU) 2016/679 · Chainalysis, 2025 Crypto Crime Report · FTX debtors' presentation (March 2023) · Government of Luxembourg press release, 14 Oct 2026 · EIB press release 2022-448 (Project Venus) · BlackRock BUIDL press release, 20 Mar 2024 · Course material, A. Lovat, University of Luxembourg (2026)</p>
   </section>
 
   </div>
@@ -569,14 +645,14 @@ svg [data-step]{ transform-box:fill-box; transform-origin:center; }
            'Point at the moving dot: this is the life of an asset. Buy, keep it safe, get paid, sell. Asset servicing is everything after "Buy".',
            'Short answer: investors like the speed, but they worry about trust. We will show both.'],
       hand:'“First, what does asset servicing mean?”' },
-    { who:0, t:50, title:'What is asset servicing?',
+    { who:0, t:45, title:'What is asset servicing?',
       say:['Imagine you buy a bond. Buying takes one second. But then a lot must happen, for years. That is asset servicing.',
            '» click: Keep it safe. Someone must hold your bond for you. That is called custody.',
            '» click: Move it. When you buy or sell, the bond and the cash must change hands. That is settlement.',
            '» click: Pay you. The bond pays interest, called a coupon. Someone must send it to you.',
            '» click: Report. You get statements, and you can vote as a shareholder.'],
       hand:'“So who does all this today?”' },
-    { who:0, t:70, title:'Today vs blockchain',
+    { who:0, t:60, title:'Today vs blockchain',
       say:['» click: Today, the money travels through a long chain: your bank, a custodian, a central securities depository (CSD), a paying agent. Watch the clock: it takes about two days. This is called T+2.',
            'Every middleman keeps its own records and takes a fee.',
            '» click: On blockchain, everyone shares one ledger. A smart contract, a small program, moves the money directly. It takes minutes.'],
@@ -595,24 +671,32 @@ svg [data-step]{ transform-box:fill-box; transform-origin:center; }
            '» click 4: The investor sends 10 ETH. The contract passes it to the borrower in seconds.',
            '» click 5: Time passes. The code refuses payback before the date.',
            '» click 6: The borrower pays back 10.5 ETH: the 10 plus 5% interest. The investor gets it at once.',
+           '» click 7: And we did not only draw it. We ran it on a test network. All six steps worked, and the code blocked four wrong moves: lending to yourself, sending money before the ID check, paying back early, and paying twice.',
            'No custodian, no paying agent. The code did the servicing.'],
       hand:'“Sounds perfect. But investors still worry.”' },
-    { who:1, t:70, title:'Five investor worries',
-      say:['» click: Custody. On blockchain, whoever has the private key, like a password, owns the asset. When the crypto exchange FTX failed in 2022, about 8 billion dollars of customer money was missing.',
-           '» click: Ownership. Does the token really make me the legal owner? Which law applies?',
-           '» click: Code. A bug can pay the wrong amount. In 2024, hackers stole 2.2 billion dollars from crypto platforms.',
-           '» click: Privacy. On a public blockchain, everyone can see every payment.',
-           '» click: Exit. Can I find a buyer, or get my cash back when I want?'],
-      hand:'“[Speaker 3] will show that our own code has these problems too.”' },
-    { who:2, t:50, title:'What our code shows',
+    { who:1, t:60, title:'Five worries, ranked',
+      say:['We ranked the worries by how much an investor can lose.',
+           '» click: Number one, the biggest: custody. On blockchain, whoever has the private key, like a password, owns the asset. When the exchange FTX collapsed in 2022, 8.9 billion dollars of customer money was missing. And in 2024, almost half of all stolen crypto came from stolen keys.',
+           '» click: Number two: ownership. Does the token really make me the legal owner? Which law applies?',
+           '» click: Number three: code. A bug can pay the wrong amount. In 2024, hackers stole 2.2 billion dollars from crypto platforms.',
+           '» click: Number four: exit. Can I find a buyer, or get my cash back when I want?',
+           '» click: Number five: privacy. Everyone can see every payment, but this is the easiest to fix, with a private blockchain.'],
+      hand:'“And our own code shows two of these worries too.”' },
+    { who:1, t:45, title:'What our code shows',
       say:['We found two of these worries in our own contract.',
            '» click: No undo button. The interest rate is "immutable": it can never change. If we made a mistake, or someone loses their key, nothing can fix it.',
            '» click: No one to call. Only the borrower can start the payback. If they never do, the code cannot force them. In a bank, someone would chase the payment.'],
-      hand:'“So, do the benefits win, or the worries?”' },
-    { who:2, t:50, title:'The balance',
+      hand:'“Charis will now weigh it all up.”' },
+    { who:2, t:45, title:'The balance',
       say:['» click: On a public blockchain with nobody in charge, the worries are heavier. The scale tips to concerns.',
            '» click: Now add rules and a trusted, regulated custodian. Luxembourg\'s blockchain laws make tokens legal assets. Audits catch bugs. A private chain protects privacy. Most worries go away, and the scale tips to benefits.',
-           'Only one stays open: exit. There are still few places to sell these tokens.'],
+           'Exit is the slowest to fix: there are still few places to sell these tokens.'],
+      hand:'“And this is not theory. It is already happening, here in Luxembourg.”' },
+    { who:2, t:50, title:'Already real',
+      say:['» click: Last month, on 14 October, the Luxembourg State issued a 1.7 billion euro, 10-year bond directly on a blockchain, through LuxCSD and Clearstream\'s D7 platform. It is listed on the Luxembourg Stock Exchange, so investors can sell it.',
+           '» click: In 2022, the European Investment Bank issued a 100 million euro digital bond, the first under Luxembourg law, on a private blockchain, paid with tokenized central-bank money.',
+           '» click: And BlackRock\'s BUIDL fund runs on public Ethereum, but BNY Mellon is the custodian, and Securitize keeps the register.',
+           '» click: The same pattern every time: blockchain for speed, a regulated party for trust.'],
       hand:'“So here is our advice.”' },
     { who:2, t:40, title:'Three questions',
       say:['Before you invest in a tokenized asset, ask three questions.',
@@ -625,6 +709,8 @@ svg [data-step]{ transform-box:fill-box; transform-origin:center; }
       say:['Everyone says thank you. Whoever covered the topic answers first.'],
       hand:'Answer in one sentence, then give one example.',
       qa:[
+        ['Did your contract really work?', 'Yes. We ran it on a local Ethereum test network (Hardhat). All six steps succeeded, the investor received exactly 10.5 ETH, and the code blocked four wrong moves with our own error messages.'],
+        ['Why is custody your number one worry?', 'Because it is the only one where you can lose everything at once and never get it back. FTX lost 8.9 billion dollars of customer money, and in 2024 about 44% of stolen crypto came from stolen private keys (Chainalysis).'],
         ['Why do we still need a custodian?', 'On blockchain, the private key is the asset. If you lose it, the asset is gone. A regulated custodian keeps keys safe and separate, like a bank vault.'],
         ['Is a token legally an asset in Luxembourg?', 'Yes. Luxembourg\'s blockchain laws (2019 to 2024) allow securities to be issued and held on a blockchain.'],
         ['What if the borrower never pays back?', 'Our code cannot force it. Real systems add collateral, a legal contract, or an agent who chases the payment.'],
@@ -735,7 +821,7 @@ svg [data-step]{ transform-box:fill-box; transform-origin:center; }
 
   var HOOKS = {
     s3: race,
-    s5: function(k, animate){ flow.show(k - 1, animate); },
+    s5: function(k, animate){ flow.show(Math.min(k, FLOW.length) - 1, animate && k <= FLOW.length); },
     s8: function(k){
       var mode = $('#mode');
       mode.className = 'mode' + (k === 1 ? ' pub' : k >= 2 ? ' perm' : '');
@@ -750,7 +836,7 @@ svg [data-step]{ transform-box:fill-box; transform-origin:center; }
   /* ---------- navigation ---------- */
   var slides = $$('.slide'), cur = 0, beat = 0, slideStart = Date.now();
   function beatsOf(s){
-    if (s.id === 's5') return FLOW.length;
+    if (s.id === 's5') return FLOW.length + 1;
     var m = EXTRA[s.id] || 0; $$('[data-step]', s).forEach(function(e){ m = Math.max(m, +e.getAttribute('data-step')); }); return m;
   }
   function setBeat(k, animate){

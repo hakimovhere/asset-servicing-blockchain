@@ -1,0 +1,10 @@
+{
+  "name": "simpleloan-test",
+  "private": true,
+  "scripts": { "test-run": "hardhat run scripts/run.js" },
+  "devDependencies": {
+    "hardhat": "2.22.17",
+    "@nomicfoundation/hardhat-ethers": "3.0.8",
+    "ethers": "6.13.4"
+  }
+}

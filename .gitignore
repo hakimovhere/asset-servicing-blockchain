@@ -1,2 +1,8 @@
 defi-deck.html
 .DS_Store
+node_modules/
+cache/
+artifacts/
+*.aux
+*.log
+Speaker_Notes_and_Study_Guide.*

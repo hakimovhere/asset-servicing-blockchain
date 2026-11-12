@@ -12,3 +12,14 @@ Group 6: Shohjahon Hakimov, Sofia Neves Gonçalves, Charis Thanasis.
 - **Cheat sheet** button: the full script on one page (print with Ctrl/Cmd + P)
 
 Open the page in two windows (presenter view on the laptop, full screen on the projector) and they stay in sync.
+
+## Files
+
+- `Slides_Backup.pdf`: every slide as a PDF, for use without internet.
+- `contract-test/`: our workshop contract `simpleLoan.sol` (all gaps completed) and a script that runs its full life cycle on a local Ethereum test network, including four wrong moves that the code must block.
+
+```bash
+cd contract-test
+npm install
+npx hardhat run scripts/run.js
+```

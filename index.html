@@ -93,12 +93,15 @@ svg [data-step]{ transform-box:fill-box; transform-origin:center; }
 .s-title h1{ font-size:var(--t-h1); line-height:1.02; font-weight:700; letter-spacing:-.02em; }
 .tag{ font-family:var(--font-d); font-size:2.6cqw; font-weight:600; line-height:1.2; color:var(--accent); }
 .titlechain{ width:46cqw; height:auto; margin-top:1cqw; }
-.titlechain .blk{ fill:var(--surface-2); stroke:var(--line-strong); stroke-width:1.5; }
-.titlechain .blk.a{ stroke:var(--accent); fill:var(--accent-soft); }
+/* Title animation: a token (the dot) travels through the life of an asset; each stage lights up when it arrives. */
+.titlechain .blk{ fill:var(--surface-2); stroke:var(--line-strong); stroke-width:1.5; animation:lit 6s infinite; animation-delay:calc(var(--i) * 1.5s); }
+.titlechain text{ font:600 15px var(--font-b); fill:var(--muted); animation:littxt 6s infinite; animation-delay:calc(var(--i) * 1.5s); }
+@keyframes lit{ 0%,22%{ fill:var(--accent-soft); stroke:var(--accent); stroke-width:2.5; } 27%,100%{ fill:var(--surface-2); stroke:var(--line-strong); stroke-width:1.5; } }
+@keyframes littxt{ 0%,22%{ fill:var(--accent); } 27%,100%{ fill:var(--muted); } }
 .titlechain .lnk{ stroke:var(--edge); stroke-width:2; stroke-dasharray:4 4; animation:dash 1.2s linear infinite; }
 @keyframes dash{ to{ stroke-dashoffset:-16; } }
-.titlechain .pulse{ fill:var(--accent); animation:hop 3.6s ease-in-out infinite; }
-@keyframes hop{ 0%{ transform:translateX(0); opacity:0 } 8%{opacity:1} 85%{ transform:translateX(350px); opacity:1 } 100%{ transform:translateX(350px); opacity:0 } }
+.titlechain .pulse{ fill:var(--accent); animation:hop 6s ease-in-out infinite; }
+@keyframes hop{ 0%,15%{ transform:translateX(0); } 25%,40%{ transform:translateX(138px); } 50%,65%{ transform:translateX(276px); } 75%,100%{ transform:translateX(414px); } }
 .team{ display:flex; gap:1cqw; flex-wrap:wrap; }
 .team > span{ font:600 var(--t-small)/1 var(--font-m); padding:.6em 1em; border-radius:999px; background:var(--surface-2); border:1px solid var(--line); }
 .team b{ color:var(--accent); font-weight:600; }
@@ -279,10 +282,13 @@ svg [data-step]{ transform-box:fill-box; transform-origin:center; }
     <p class="eyebrow rise">Topic #3 · Final presentation</p>
     <h1 class="rise" style="--d:1">Blockchain in<br>asset servicing</h1>
     <p class="tag rise" style="--d:2">What worries investors?</p>
-    <svg class="titlechain rise" style="--d:3" viewBox="0 0 460 60" aria-hidden="true">
-      <line class="lnk" x1="70" y1="30" x2="110" y2="30"/><line class="lnk" x1="180" y1="30" x2="220" y2="30"/><line class="lnk" x1="290" y1="30" x2="330" y2="30"/>
-      <rect class="blk" x="2" y="8" width="68" height="44" rx="8"/><rect class="blk" x="110" y="8" width="70" height="44" rx="8"/><rect class="blk a" x="220" y="8" width="70" height="44" rx="8"/><rect class="blk" x="330" y="8" width="68" height="44" rx="8"/>
-      <circle class="pulse" cx="14" cy="30" r="6"/>
+    <svg class="titlechain rise" style="--d:3" viewBox="0 0 520 60" aria-label="The life of an asset: buy, keep safe, get paid, sell">
+      <line class="lnk" x1="102" y1="30" x2="140" y2="30"/><line class="lnk" x1="240" y1="30" x2="278" y2="30"/><line class="lnk" x1="378" y1="30" x2="416" y2="30"/>
+      <circle class="pulse" cx="52" cy="30" r="7"/>
+      <g class="stage-b" style="--i:0"><rect class="blk" x="2" y="8" width="100" height="44" rx="9"/><text x="52" y="35" text-anchor="middle">Buy</text></g>
+      <g class="stage-b" style="--i:1"><rect class="blk" x="140" y="8" width="100" height="44" rx="9"/><text x="190" y="35" text-anchor="middle">Keep safe</text></g>
+      <g class="stage-b" style="--i:2"><rect class="blk" x="278" y="8" width="100" height="44" rx="9"/><text x="328" y="35" text-anchor="middle">Get paid</text></g>
+      <g class="stage-b" style="--i:3"><rect class="blk" x="416" y="8" width="100" height="44" rx="9"/><text x="466" y="35" text-anchor="middle">Sell</text></g>
     </svg>
     <div class="team rise" style="--d:4"><span><b>01</b> <span data-spk="0"></span></span><span><b>02</b> <span data-spk="1"></span></span><span><b>03</b> <span data-spk="2"></span></span></div>
     <p class="foot rise" style="--d:5">Group 6 ·3.DTF2 Blockchain and Cryptocurrency Markets · Aymeric Lovat · University of Luxembourg · 2026</p>
@@ -557,6 +563,7 @@ svg [data-step]{ transform-box:fill-box; transform-origin:center; }
     { who:0, t:30, title:'Title',
       say:['Hello, we are Shohjahon, Sofia and Charis, Group 6.',
            'Our topic: blockchain in asset servicing. What are the major concerns for investors?',
+           'Point at the moving dot: this is the life of an asset. Buy, keep it safe, get paid, sell. Asset servicing is everything after "Buy".',
            'Short answer: investors like the speed, but they worry about trust. We will show both.'],
       hand:'“First, what does asset servicing mean?”' },
     { who:0, t:50, title:'What is asset servicing?',

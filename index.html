@@ -966,11 +966,9 @@ svg [data-step]{ transform-box:fill-box; transform-origin:center; }
     try {
       var p = req.call(w);
       if (p && p.catch) p.catch(function(){ setFake(true); });
-      setTimeout(function(){ if (!fsEl()) setFake(true); }, 800);
     } catch (e) { setFake(true); }
   }
-  // F / button: fill the browser window (no "site is full screen" notice from the browser).
-  // Shift+F: ask the browser for real full screen.
+  // F / button: real full screen (hides the browser bar). Shift+F: only fill the browser window.
   function fillToggle(){
     if (fsEl()) { try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) {} return; }
     setFake(!$('#stagewrap').classList.contains('fs-fake'));
@@ -984,7 +982,7 @@ svg [data-step]{ transform-box:fill-box; transform-origin:center; }
   $('#stage').addEventListener('click', function(e){ if (!e.target.closest('button,a,summary')) next(); });
   $('#ppbtn').addEventListener('click', function(){ setPresenter(!ppOn); });
   $('#sheetbtn').addEventListener('click', function(){ var s = $('#sheet'); s.hidden = !s.hidden; this.setAttribute('aria-pressed', s.hidden ? 'false' : 'true'); if (!s.hidden) s.scrollIntoView({ behavior:'smooth' }); });
-  $('#fsbtn').addEventListener('click', fillToggle);
+  $('#fsbtn').addEventListener('click', fullscreen);
   $('#tstart').addEventListener('click', toggleTimer);
   $('#treset').addEventListener('click', function(){ running = false; tAcc = 0; $('#tstart').textContent = 'Start timer'; tickClock(); });
   document.addEventListener('keydown', function(e){
@@ -992,8 +990,8 @@ svg [data-step]{ transform-box:fill-box; transform-origin:center; }
     if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' '){ next(); e.preventDefault(); }
     else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ prev(); e.preventDefault(); }
     else if (e.key === 'p' || e.key === 'P') setPresenter(!ppOn);
-    else if (e.key === 'F' && e.shiftKey) fullscreen();
-    else if (e.key === 'f' || e.key === 'F') fillToggle();
+    else if (e.key === 'F' && e.shiftKey) fillToggle();
+    else if (e.key === 'f' || e.key === 'F') fullscreen();
     else if (e.key === 't' || e.key === 'T') toggleTimer();
   });
 

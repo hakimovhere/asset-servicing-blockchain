@@ -44,8 +44,14 @@ body{ background:var(--bg); color:var(--ink); font-family:var(--font-b); }
   --t-h1:6cqw; --t-h2:3cqw; --t-lead:1.9cqw; --t-body:1.6cqw; --t-small:1.25cqw; --t-tiny:1cqw;
   --pad:3.4cqw; --gap:1.4cqw;
 }
-.stagewrap:fullscreen{ background:var(--bg); align-items:center; }
-.stagewrap:fullscreen .stage{ width:min(100vw, calc(100vh * 16 / 9)); border-radius:0; }
+.stagewrap:fullscreen{ background:var(--bg); align-items:center; width:100vw; height:100vh; }
+.stagewrap:fullscreen .stage{ width:min(100vw, calc(100vh * 16 / 9)); border-radius:0; border:0; }
+.stagewrap:-webkit-full-screen{ background:var(--bg); align-items:center; width:100vw; height:100vh; }
+.stagewrap:-webkit-full-screen .stage{ width:min(100vw, calc(100vh * 16 / 9)); border-radius:0; border:0; }
+/* fallback when the browser refuses real full screen (e.g. inside a frame): fill the window */
+.stagewrap.fs-fake{ position:fixed; inset:0; z-index:9999; background:var(--bg); align-items:center; width:100vw; height:100vh; }
+.stagewrap.fs-fake .stage{ width:min(100vw, calc(100vh * 16 / 9)); border-radius:0; border:0; }
+body.fs-lock{ overflow:hidden; }
 
 .slide{ position:absolute; inset:0; padding:var(--pad); display:flex; flex-direction:column; gap:var(--gap); }
 .eyebrow{ margin:0; font:600 var(--t-small)/1.2 var(--font-b); letter-spacing:.12em; text-transform:uppercase; color:var(--accent); }
@@ -939,10 +945,34 @@ svg [data-step]{ transform-box:fill-box; transform-origin:center; }
   function broadcast(){ if (bc && !fromRemote) try { bc.postMessage({ s:cur, b:beat }); } catch (e) {} }
 
   /* ---------- controls ---------- */
+  function fsEl(){ return document.fullscreenElement || document.webkitFullscreenElement || null; }
+  function setFake(on){
+    $('#stagewrap').classList.toggle('fs-fake', on);
+    document.body.classList.toggle('fs-lock', on);
+    fsLabel();
+  }
+  function fsLabel(){
+    var on = !!fsEl() || $('#stagewrap').classList.contains('fs-fake');
+    $('#fsbtn').textContent = on ? 'Exit full screen' : 'Full screen';
+    $('#fsbtn').setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
   function fullscreen(){
     var w = $('#stagewrap');
-    try { if (document.fullscreenElement) document.exitFullscreen(); else if (w.requestFullscreen){ var p = w.requestFullscreen(); if (p && p.catch) p.catch(function(){}); } } catch (e) {}
+    if (w.classList.contains('fs-fake')) { setFake(false); return; }
+    if (fsEl()) { try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) {} return; }
+    var req = w.requestFullscreen || w.webkitRequestFullscreen;
+    var allowed = document.fullscreenEnabled !== false && document.webkitFullscreenEnabled !== false;
+    if (!req || !allowed) { setFake(true); return; }
+    try {
+      var p = req.call(w);
+      if (p && p.catch) p.catch(function(){ setFake(true); });
+      setTimeout(function(){ if (!fsEl()) setFake(true); }, 800);
+    } catch (e) { setFake(true); }
   }
+  function fsChange(){ if (fsEl() && $('#stagewrap').classList.contains('fs-fake')) setFake(false); fsLabel(); }
+  document.addEventListener('fullscreenchange', fsChange);
+  document.addEventListener('webkitfullscreenchange', fsChange);
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && $('#stagewrap').classList.contains('fs-fake')) setFake(false); });
   $('#prev').addEventListener('click', prev);
   $('#next').addEventListener('click', next);
   $('#stage').addEventListener('click', function(e){ if (!e.target.closest('button,a,summary')) next(); });

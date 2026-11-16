@@ -992,7 +992,8 @@ svg [data-step]{ transform-box:fill-box; transform-origin:center; }
 
   var m = /^#s(\d+)$/.exec(location.hash || '');
   go(m ? parseInt(m[1], 10) - 1 : 0);
-  if (store.get('as-pp') === '1') setPresenter(true);
+  if (/[?&]present\b/.test(location.search)) setFake(true);
+  else if (store.get('as-pp') === '1') setPresenter(true);
 })();
 </script>
 </body>
